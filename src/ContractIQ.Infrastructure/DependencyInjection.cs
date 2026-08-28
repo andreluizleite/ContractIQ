@@ -1,4 +1,6 @@
 using ContractIQ.Application.Abstractions.Persistence;
+using ContractIQ.Application.Knowledge;
+using ContractIQ.Infrastructure.Knowledge;
 using ContractIQ.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -21,12 +23,27 @@ public static class DependencyInjection
             ?? throw new InvalidOperationException(
                 $"Connection string '{ConnectionStringName}' is not configured.");
 
-        return services.AddInfrastructure(connectionString);
+        KnowledgeOptions knowledgeOptions = KnowledgeOptions.FromConfiguration(configuration);
+        return services.AddInfrastructure(connectionString, knowledgeOptions);
     }
 
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         string connectionString)
+    {
+        return services.AddInfrastructure(
+            connectionString,
+            new KnowledgeOptions(
+                "sample-data/knowledge",
+                new Uri("http://localhost:11434"),
+                "embeddinggemma",
+                768));
+    }
+
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        string connectionString,
+        KnowledgeOptions knowledgeOptions)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
@@ -48,6 +65,10 @@ public static class DependencyInjection
         services.AddScoped<ICustomerRepository, PostgresCustomerRepository>();
         services.AddScoped<IContractRepository, PostgresContractRepository>();
         services.AddScoped<ICancellationRequestStore, PostgresCancellationRequestStore>();
+        services.AddScoped<IKnowledgeIndex, PostgresKnowledgeIndex>();
+        services.AddSingleton(knowledgeOptions);
+        services.AddSingleton<IKnowledgeDocumentCatalog, FileSystemKnowledgeDocumentCatalog>();
+        services.AddSingleton<IKnowledgeEmbeddingGenerator, OllamaKnowledgeEmbeddingGenerator>();
 
         return services;
     }

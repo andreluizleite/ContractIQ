@@ -13,6 +13,12 @@ public sealed class ContractIqDbContext(DbContextOptions<ContractIqDbContext> op
     internal DbSet<CancellationRequestRecord> CancellationRequests =>
         Set<CancellationRequestRecord>();
 
+    internal DbSet<KnowledgeDocumentRecord> KnowledgeDocuments =>
+        Set<KnowledgeDocumentRecord>();
+
+    internal DbSet<KnowledgeChunkRecord> KnowledgeChunks =>
+        Set<KnowledgeChunkRecord>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

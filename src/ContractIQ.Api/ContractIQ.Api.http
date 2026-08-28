@@ -3,6 +3,7 @@
 @cancelledContractId = cccccccc-cccc-4ccc-8ccc-cccccccccccc
 @idempotencyKey = demo-acme-cancellation-001
 
+
 ### Health check
 GET {{host}}/health
 
@@ -47,6 +48,18 @@ Accept: application/json
 POST {{host}}/api/v1/contracts/{{cancelledContractId}}/cancellation-requests
 Idempotency-Key: demo-inactive-contract-001
 Accept: application/json
+
+### Retrieve ACME contract and policy evidence (requires indexed documents and Ollama)
+POST {{host}}/api/v1/knowledge/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "query": "Can ACME cancel without a penalty?",
+  "customerId": "11111111-1111-4111-8111-111111111111",
+  "contractId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "limit": 5
+}
 
 ### OpenAPI document, available in Development
 GET {{host}}/openapi/v1.json

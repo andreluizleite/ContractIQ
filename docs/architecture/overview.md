@@ -33,7 +33,9 @@ The current deterministic rules are documented in [Contract cancellation rules](
 
 ### Knowledge
 
-The knowledge module owns document ingestion, versioning, chunking, embeddings, indexing, retrieval, and citations. It never decides whether a contract can be cancelled.
+The knowledge module owns document ingestion, versioning, chunking, embeddings, indexing, retrieval, and citations. It never decides whether a contract can be cancelled. Its application ports are provider-neutral; the current local adapters use Ollama for multilingual embeddings and PostgreSQL for lexical and vector retrieval.
+
+Customer, contract, and effective-date filters are applied before ranking. PostgreSQL lexical and cosine-similarity candidate lists are fused with Reciprocal Rank Fusion. See [Local knowledge retrieval](../knowledge/local-retrieval.md) for the concrete flow and trade-offs.
 
 ### Assistant orchestration
 

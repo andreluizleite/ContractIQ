@@ -67,6 +67,11 @@ public sealed class ApplicationExceptionHandler(
             validation.Message,
             "validation_error",
             validation.Field),
+        ExternalDependencyUnavailableException unavailable => new ExceptionMapping(
+            StatusCodes.Status503ServiceUnavailable,
+            "External dependency unavailable",
+            unavailable.Message,
+            $"{unavailable.Dependency}_unavailable"),
         _ => new ExceptionMapping(
             StatusCodes.Status500InternalServerError,
             "Unexpected error",

@@ -8,6 +8,8 @@ using ContractIQ.Application.Contracts.AssessCancellation;
 using ContractIQ.Application.Contracts.GetContractDetails;
 using ContractIQ.Application.Contracts.ListCustomerContracts;
 using ContractIQ.Application.Customers.ListCustomers;
+using ContractIQ.Application.Knowledge;
+using ContractIQ.Application.Knowledge.Search;
 using ContractIQ.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
@@ -28,6 +30,8 @@ builder.Services.AddScoped<GetContractDetailsHandler>();
 builder.Services.AddScoped<ListCustomerContractsHandler>();
 builder.Services.AddScoped<AssessCancellationHandler>();
 builder.Services.AddScoped<CreateCancellationRequestHandler>();
+builder.Services.AddSingleton<MarkdownKnowledgeChunker>();
+builder.Services.AddScoped<SearchKnowledgeHandler>();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
