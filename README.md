@@ -42,6 +42,16 @@ docker compose up -d postgres
 dotnet run --project src/ContractIQ.Api
 ```
 
+In a second terminal, start the React interface:
+
+```powershell
+Set-Location src/ContractIQ.Web
+npm ci
+npm run dev
+```
+
+Open the URL printed by Vite, normally `http://localhost:5173`. The interface supports English and Brazilian Portuguese and proxies its local API requests to the .NET process.
+
 The API applies committed migrations and idempotent fictional seed data during startup. The database port is bound to the local machine only. The committed credentials are fictional and intended exclusively for local development.
 
 See the [local development guide](docs/development.md) for first-time setup, frontend commands, database lifecycle, migrations, and troubleshooting.

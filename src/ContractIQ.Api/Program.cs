@@ -6,6 +6,7 @@ using ContractIQ.Api.Health;
 using ContractIQ.Application.Cancellations.CreateCancellationRequest;
 using ContractIQ.Application.Contracts.AssessCancellation;
 using ContractIQ.Application.Contracts.GetContractDetails;
+using ContractIQ.Application.Contracts.ListCustomerContracts;
 using ContractIQ.Application.Customers.ListCustomers;
 using ContractIQ.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -24,6 +25,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<ListCustomersHandler>();
 builder.Services.AddScoped<GetContractDetailsHandler>();
+builder.Services.AddScoped<ListCustomerContractsHandler>();
 builder.Services.AddScoped<AssessCancellationHandler>();
 builder.Services.AddScoped<CreateCancellationRequestHandler>();
 builder.Services.AddInfrastructure(builder.Configuration);

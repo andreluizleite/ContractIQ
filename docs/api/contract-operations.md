@@ -20,6 +20,7 @@ The seed operation is idempotent: restarting the API keeps cancellation requests
 | Method | Route | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/v1/customers` | List the fictional customers. |
+| `GET` | `/api/v1/customers/{customerId}/contracts` | List the customer's structured contracts. |
 | `GET` | `/api/v1/contracts/{contractId}` | Read structured contract details. |
 | `GET` | `/api/v1/contracts/{contractId}/cancellation-assessment` | Calculate eligibility, termination date, and penalty using domain rules. |
 | `POST` | `/api/v1/contracts/{contractId}/cancellation-requests` | Recalculate the assessment and create a `PendingReview` request. |

@@ -1,0 +1,141 @@
+import type { AssessmentReason, ContractStatus } from './api'
+
+export type Language = 'en' | 'pt-BR'
+
+const english = {
+  languageLabel: 'Language',
+  productEyebrow: 'Contract operations workspace',
+  title: 'Make contract decisions with confidence.',
+  description:
+    'Review customer data, understand deterministic cancellation terms, and create an auditable request.',
+  customers: 'Customers',
+  customersDescription: 'Select a customer to review their contracts.',
+  contracts: 'Contracts',
+  contract: 'Contract',
+  chooseCustomer: 'Choose a customer',
+  chooseCustomerDescription: 'Their available contracts will appear here.',
+  chooseContract: 'Choose a contract to review its cancellation terms.',
+  loadingCustomers: 'Loading customers…',
+  loadingContracts: 'Loading contracts…',
+  loadingAssessment: 'Calculating the cancellation assessment…',
+  noCustomers: 'No customers are available.',
+  noContracts: 'This customer has no contracts.',
+  retry: 'Try again',
+  requestFailed: 'We could not load this information. Try again in a moment.',
+  contractDetails: 'Contract details',
+  monthlyFee: 'Monthly fee',
+  startDate: 'Start date',
+  commitmentEnd: 'Minimum commitment ends',
+  noticePeriod: 'Notice period',
+  days: 'days',
+  earlyTerminationRate: 'Early termination rate',
+  assessment: 'Cancellation assessment',
+  eligible: 'Cancellation is available',
+  notEligible: 'Cancellation is not available',
+  earliestTermination: 'Earliest termination',
+  remainingPeriods: 'Chargeable periods',
+  estimatedPenalty: 'Deterministic penalty',
+  noPenalty: 'No penalty',
+  createRequest: 'Create cancellation request',
+  confirmationTitle: 'Confirm cancellation request',
+  confirmationDescription:
+    'ContractIQ will create a request for internal review. The contract is not cancelled immediately.',
+  confirmationCheck: 'I reviewed the date and penalty shown above.',
+  confirmationRequired:
+    'Confirm that you reviewed the assessment before continuing.',
+  cancel: 'Go back',
+  confirm: 'Confirm request',
+  creating: 'Creating request…',
+  successTitle: 'Request created',
+  successDescription: 'The cancellation request is pending internal review.',
+  requestId: 'Request ID',
+  status: 'Status',
+  pendingReview: 'Pending review',
+  apiUnavailable:
+    'The API is unavailable. Confirm that the .NET API and PostgreSQL are running.',
+  conflict: 'A cancellation request is already open for this contract.',
+  footerPrinciple: 'AI assists. Domain rules decide.',
+  statusLabels: {
+    active: 'Active',
+    cancelled: 'Cancelled',
+    expired: 'Expired',
+  } satisfies Record<ContractStatus, string>,
+  reasonLabels: {
+    allowed: 'The active contract can be submitted for cancellation review.',
+    contractAlreadyCancelled: 'This contract has already been cancelled.',
+    contractExpired: 'This contract has expired.',
+  } satisfies Record<AssessmentReason, string>,
+}
+
+const portuguese: typeof english = {
+  languageLabel: 'Idioma',
+  productEyebrow: 'Área de operações contratuais',
+  title: 'Decida sobre contratos com confiança.',
+  description:
+    'Consulte dados do cliente, entenda as condições determinísticas de cancelamento e crie uma solicitação auditável.',
+  customers: 'Clientes',
+  customersDescription: 'Selecione um cliente para consultar seus contratos.',
+  contracts: 'Contratos',
+  contract: 'Contrato',
+  chooseCustomer: 'Selecione um cliente',
+  chooseCustomerDescription: 'Os contratos disponíveis aparecerão aqui.',
+  chooseContract:
+    'Selecione um contrato para consultar suas condições de cancelamento.',
+  loadingCustomers: 'Carregando clientes…',
+  loadingContracts: 'Carregando contratos…',
+  loadingAssessment: 'Calculando a avaliação de cancelamento…',
+  noCustomers: 'Nenhum cliente está disponível.',
+  noContracts: 'Este cliente não possui contratos.',
+  retry: 'Tentar novamente',
+  requestFailed:
+    'Não foi possível carregar estas informações. Tente novamente em instantes.',
+  contractDetails: 'Detalhes do contrato',
+  monthlyFee: 'Mensalidade',
+  startDate: 'Data de início',
+  commitmentEnd: 'Fim da fidelidade mínima',
+  noticePeriod: 'Aviso prévio',
+  days: 'dias',
+  earlyTerminationRate: 'Taxa de cancelamento antecipado',
+  assessment: 'Avaliação de cancelamento',
+  eligible: 'Cancelamento disponível',
+  notEligible: 'Cancelamento indisponível',
+  earliestTermination: 'Primeiro término possível',
+  remainingPeriods: 'Períodos cobrados',
+  estimatedPenalty: 'Multa determinística',
+  noPenalty: 'Sem multa',
+  createRequest: 'Criar solicitação de cancelamento',
+  confirmationTitle: 'Confirmar solicitação de cancelamento',
+  confirmationDescription:
+    'O ContractIQ criará uma solicitação para análise interna. O contrato não será cancelado imediatamente.',
+  confirmationCheck: 'Revisei a data e a multa apresentadas acima.',
+  confirmationRequired:
+    'Confirme que você revisou a avaliação antes de continuar.',
+  cancel: 'Voltar',
+  confirm: 'Confirmar solicitação',
+  creating: 'Criando solicitação…',
+  successTitle: 'Solicitação criada',
+  successDescription: 'A solicitação de cancelamento aguarda análise interna.',
+  requestId: 'ID da solicitação',
+  status: 'Status',
+  pendingReview: 'Aguardando análise',
+  apiUnavailable:
+    'A API está indisponível. Confirme que a API .NET e o PostgreSQL estão em execução.',
+  conflict:
+    'Já existe uma solicitação de cancelamento aberta para este contrato.',
+  footerPrinciple: 'A IA auxilia. As regras de domínio decidem.',
+  statusLabels: {
+    active: 'Ativo',
+    cancelled: 'Cancelado',
+    expired: 'Expirado',
+  },
+  reasonLabels: {
+    allowed: 'O contrato ativo pode ser enviado para análise de cancelamento.',
+    contractAlreadyCancelled: 'Este contrato já foi cancelado.',
+    contractExpired: 'Este contrato está expirado.',
+  },
+}
+
+export const translations = {
+  en: english,
+  'pt-BR': portuguese,
+}

@@ -150,12 +150,14 @@ dotnet run --project src/ContractIQ.Api
 
 The API listens on `http://localhost:5186` by default. Use the executable request collection at `src/ContractIQ.Api/ContractIQ.Api.http` or see the [contract operation API guide](api/contract-operations.md) for the seeded demonstration flow.
 
+In a second terminal, start the React application:
+
 ```powershell
 Set-Location src/ContractIQ.Web
 npm run dev
 ```
 
-The Vite development server prints its local URL after startup.
+The Vite development server prints its local URL, normally `http://localhost:5173`. During local development, Vite proxies `/api` requests to the .NET API at `http://localhost:5186`, so both processes must remain running. The browser never needs the PostgreSQL credentials; only the API connects to the database.
 
 ## Formatting
 
