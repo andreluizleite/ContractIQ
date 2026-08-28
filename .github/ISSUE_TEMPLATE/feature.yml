@@ -60,4 +60,3 @@ body:
         - P0 - blocking or critical
     validations:
       required: true
-

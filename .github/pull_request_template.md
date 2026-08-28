@@ -41,4 +41,3 @@ Closes #
 ## Screenshots or traces
 
 <!-- Include UI screenshots or an observability trace when they materially help review. -->
-

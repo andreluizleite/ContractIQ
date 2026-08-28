@@ -18,4 +18,3 @@ Build a modular monolith with separate Domain, Application, Infrastructure, API,
 - Cross-module calls remain in-process and transactional when required.
 - The solution does not demonstrate distributed systems patterns that the use case does not need.
 - A module can be extracted later only if an independently scalable or deployable boundary becomes real.
-

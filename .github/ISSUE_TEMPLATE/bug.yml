@@ -46,4 +46,3 @@ body:
       placeholder: Local Demo, Local AI, or Azure
     validations:
       required: true
-

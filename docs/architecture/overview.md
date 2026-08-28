@@ -62,4 +62,3 @@ Retrieved document content is untrusted data. Instructions inside a document can
 - `Azure`: optional Microsoft Foundry and Azure AI Search adapters.
 
 The default developer experience remains functional without Azure.
-

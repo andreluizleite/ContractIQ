@@ -20,4 +20,3 @@ Documents retrieved through RAG provide evidence and explanation. Any policy tha
 - Answers can distinguish deterministic conclusions from supporting evidence.
 - Structured rules and their source documents must be kept consistent.
 - Divergence between structured data and document evidence must be reported rather than silently reconciled by the model.
-
