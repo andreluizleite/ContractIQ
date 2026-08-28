@@ -29,6 +29,8 @@ flowchart TB
 
 The core domain owns customers, contracts, termination terms, cancellation assessments, and cancellation requests. It is the authority for dates, penalties, validation, state changes, and invariants.
 
+The current deterministic rules are documented in [Contract cancellation rules](../domain/cancellation-rules.md).
+
 ### Knowledge
 
 The knowledge module owns document ingestion, versioning, chunking, embeddings, indexing, retrieval, and citations. It never decides whether a contract can be cancelled.
