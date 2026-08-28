@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using ContractIQ.Application.Cancellations.CreateCancellationRequest;
 using ContractIQ.Application.Contracts.AssessCancellation;
 using ContractIQ.Application.Contracts.GetContractDetails;
+using ContractIQ.Application.Contracts.ListCustomerContracts;
 using ContractIQ.Application.Customers.ListCustomers;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,6 +19,12 @@ public static class ApiEndpoints
             .WithTags("Customers")
             .WithSummary("Lists customers available to the current user.")
             .Produces<CustomerSummaryDto[]>(StatusCodes.Status200OK);
+
+        api.MapGet("/customers/{customerId:guid}/contracts", ListCustomerContractsAsync)
+            .WithName("ListCustomerContracts")
+            .WithTags("Contracts")
+            .WithSummary("Lists the structured contracts for a customer.")
+            .Produces<ContractSummaryDto[]>(StatusCodes.Status200OK);
 
         api.MapGet("/contracts/{contractId:guid}", GetContractDetailsAsync)
             .WithName("GetContractDetails")
@@ -73,6 +80,18 @@ public static class ApiEndpoints
             cancellationToken);
 
         return Results.Ok(contract);
+    }
+
+    private static async Task<IResult> ListCustomerContractsAsync(
+        Guid customerId,
+        ListCustomerContractsHandler handler,
+        CancellationToken cancellationToken)
+    {
+        var contracts = await handler.HandleAsync(
+            new ListCustomerContractsQuery(customerId),
+            cancellationToken);
+
+        return Results.Ok(contracts);
     }
 
     private static async Task<IResult> AssessCancellationAsync(

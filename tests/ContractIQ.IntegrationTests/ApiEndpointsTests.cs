@@ -47,6 +47,27 @@ public sealed class ApiEndpointsTests(PostgreSqlFixture postgres) : IAsyncLifeti
     }
 
     [Fact]
+    public async Task Customer_contracts_endpoint_returns_only_that_customers_contracts()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync(
+            $"/api/v1/customers/{DemoDataIds.InitechCustomer}/contracts",
+            CancellationToken.None);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = await ReadJsonAsync(response);
+        JsonElement[] contracts = document.RootElement.EnumerateArray().ToArray();
+        Assert.Equal(2, contracts.Length);
+        Assert.All(
+            contracts,
+            contract => Assert.Equal(
+                DemoDataIds.InitechCustomer,
+                contract.GetProperty("customerId").GetGuid()));
+    }
+
+    [Fact]
     public async Task Contract_details_endpoint_returns_the_seeded_contract()
     {
         using var factory = CreateFactory();
@@ -306,7 +327,7 @@ public sealed class ApiEndpointsTests(PostgreSqlFixture postgres) : IAsyncLifeti
     }
 
     [Fact]
-    public async Task OpenApi_describes_the_four_API_paths_and_required_idempotency_header()
+    public async Task OpenApi_describes_the_API_paths_and_required_idempotency_header()
     {
         using var factory = CreateFactory();
         using var client = factory.CreateClient();
@@ -319,6 +340,7 @@ public sealed class ApiEndpointsTests(PostgreSqlFixture postgres) : IAsyncLifeti
         string[] expectedPaths =
         [
             "/api/v1/customers",
+            "/api/v1/customers/{customerId}/contracts",
             "/api/v1/contracts/{contractId}",
             "/api/v1/contracts/{contractId}/cancellation-assessment",
             "/api/v1/contracts/{contractId}/cancellation-requests",

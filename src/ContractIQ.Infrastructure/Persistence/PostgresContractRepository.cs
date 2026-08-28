@@ -19,6 +19,20 @@ internal sealed class PostgresContractRepository(ContractIqDbContext dbContext)
         return record is null ? null : ToDomain(record);
     }
 
+    public async Task<IReadOnlyList<Contract>> ListByCustomerIdAsync(
+        Guid customerId,
+        CancellationToken cancellationToken)
+    {
+        ContractRecord[] records = await dbContext.Contracts
+            .AsNoTracking()
+            .Where(contract => contract.CustomerId == customerId)
+            .OrderByDescending(contract => contract.StartDate)
+            .ThenBy(contract => contract.Id)
+            .ToArrayAsync(cancellationToken);
+
+        return records.Select(ToDomain).ToArray();
+    }
+
     private static Contract ToDomain(ContractRecord record) =>
         new(
             record.Id,

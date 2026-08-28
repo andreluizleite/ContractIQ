@@ -28,6 +28,19 @@ internal sealed class FakeContractRepository(params Contract[] contracts) : ICon
         _contracts.TryGetValue(contractId, out var contract);
         return Task.FromResult(contract);
     }
+
+    public Task<IReadOnlyList<Contract>> ListByCustomerIdAsync(
+        Guid customerId,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        IReadOnlyList<Contract> matches = _contracts.Values
+            .Where(contract => contract.CustomerId == customerId)
+            .OrderByDescending(contract => contract.StartDate)
+            .ThenBy(contract => contract.Id)
+            .ToArray();
+        return Task.FromResult(matches);
+    }
 }
 
 internal sealed class FakeCancellationRequestStore : ICancellationRequestStore

@@ -16,6 +16,10 @@ GET {{host}}/health/ready
 GET {{host}}/api/v1/customers
 Accept: application/json
 
+### List ACME's contracts
+GET {{host}}/api/v1/customers/11111111-1111-4111-8111-111111111111/contracts
+Accept: application/json
+
 ### Get ACME's structured contract data
 GET {{host}}/api/v1/contracts/{{acmeContractId}}
 Accept: application/json
