@@ -6,7 +6,7 @@ The application answers contract questions using structured business data, deter
 
 ## Project status
 
-The foundation and first deterministic contract-cancellation vertical slice are implemented with PostgreSQL persistence and real integration tests. Delivery is tracked through GitHub Issues, milestones, short-lived branches, and linked pull requests.
+The foundation, bilingual React shell, deterministic cancellation vertical slice, PostgreSQL persistence, and local hybrid knowledge retrieval are implemented with automated tests. Delivery is tracked through GitHub Issues, milestones, short-lived branches, and linked pull requests.
 
 ## Planned technology
 
@@ -29,6 +29,7 @@ Cancellation eligibility, dates, penalties, validation, authorization, idempoten
 
 - [Architecture overview](docs/architecture/overview.md)
 - [Contract operation API](docs/api/contract-operations.md)
+- [Local knowledge retrieval](docs/knowledge/local-retrieval.md)
 - [Delivery roadmap](docs/roadmap.md)
 - [Contributing](CONTRIBUTING.md)
 - [Architecture Decision Records](docs/adr)

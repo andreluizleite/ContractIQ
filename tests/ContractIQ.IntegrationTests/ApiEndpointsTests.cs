@@ -1,5 +1,7 @@
 using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json;
+using ContractIQ.Application.Knowledge.Indexing;
 using ContractIQ.Infrastructure;
 using ContractIQ.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
@@ -344,6 +346,7 @@ public sealed class ApiEndpointsTests(PostgreSqlFixture postgres) : IAsyncLifeti
             "/api/v1/contracts/{contractId}",
             "/api/v1/contracts/{contractId}/cancellation-assessment",
             "/api/v1/contracts/{contractId}/cancellation-requests",
+            "/api/v1/knowledge/search",
         ];
 
         Assert.Equal(expectedPaths.Length, paths.EnumerateObject().Count());
@@ -366,6 +369,79 @@ public sealed class ApiEndpointsTests(PostgreSqlFixture postgres) : IAsyncLifeti
             idempotencyHeader.TryGetProperty("required", out JsonElement required) &&
             required.GetBoolean(),
             "OpenAPI must mark the Idempotency-Key header as required.");
+    }
+
+    [Fact]
+    public async Task Knowledge_search_returns_current_scoped_evidence_with_citation_metadata()
+    {
+        IndexKnowledgeDocumentsResult indexResult =
+            await _databaseFactory!.IndexKnowledgeDocumentsAsync();
+        IndexKnowledgeDocumentsResult reindexResult =
+            await _databaseFactory.IndexKnowledgeDocumentsAsync();
+        using var client = _databaseFactory.CreateClient();
+
+        using var response = await client.PostAsJsonAsync(
+            "/api/v1/knowledge/search",
+            new
+            {
+                Query = "penalty before commitment",
+                CustomerId = DemoDataIds.AcmeCustomer,
+                ContractId = DemoDataIds.AcmeActiveContract,
+                AsOf = "2026-08-28",
+                Limit = 5,
+            },
+            CancellationToken.None);
+
+        Assert.Equal(4, indexResult.IndexedDocuments);
+        Assert.Equal(0, reindexResult.IndexedDocuments);
+        Assert.Equal(4, reindexResult.SkippedDocuments);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = await ReadJsonAsync(response);
+        JsonElement[] evidence = document.RootElement.EnumerateArray().ToArray();
+        Assert.NotEmpty(evidence);
+        Assert.DoesNotContain(
+            evidence,
+            item => item.GetProperty("documentKey").GetString() == "contract-globex");
+
+        JsonElement contractEvidence = evidence.Single(item =>
+            item.GetProperty("documentKey").GetString() == "contract-acme");
+        Assert.Equal("2.0", contractEvidence.GetProperty("version").GetString());
+        Assert.Equal("Termination for convenience", contractEvidence.GetProperty("section").GetString());
+        Assert.Equal(2, contractEvidence.GetProperty("page").GetInt32());
+        Assert.Equal("contracts/acme-v2.0.md", contractEvidence.GetProperty("sourcePath").GetString());
+        Assert.True(contractEvidence.GetProperty("score").GetDouble() > 0);
+        Assert.NotEqual(JsonValueKind.Null, contractEvidence.GetProperty("lexicalScore").ValueKind);
+        Assert.NotEqual(JsonValueKind.Null, contractEvidence.GetProperty("vectorScore").ValueKind);
+    }
+
+    [Fact]
+    public async Task Knowledge_search_selects_the_version_effective_as_of_the_requested_date()
+    {
+        await _databaseFactory!.IndexKnowledgeDocumentsAsync();
+        using var client = _databaseFactory.CreateClient();
+
+        using var response = await client.PostAsJsonAsync(
+            "/api/v1/knowledge/search",
+            new
+            {
+                Query = "penalty before commitment",
+                CustomerId = DemoDataIds.AcmeCustomer,
+                ContractId = DemoDataIds.AcmeActiveContract,
+                AsOf = "2026-03-01",
+                Limit = 5,
+            },
+            CancellationToken.None);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = await ReadJsonAsync(response);
+        JsonElement contractEvidence = document.RootElement
+            .EnumerateArray()
+            .Single(item => item.GetProperty("documentKey").GetString() == "contract-acme");
+        Assert.Equal("1.0", contractEvidence.GetProperty("version").GetString());
+        Assert.Contains(
+            "forty percent",
+            contractEvidence.GetProperty("content").GetString(),
+            StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

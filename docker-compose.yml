@@ -18,5 +18,20 @@ services:
       retries: 10
       start_period: 10s
 
+  ollama:
+    image: ollama/ollama:0.11.10
+    profiles: ["local-ai"]
+    ports:
+      - "127.0.0.1:${CONTRACTIQ_OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - contractiq-ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
 volumes:
   contractiq-postgres-data:
+  contractiq-ollama-data:

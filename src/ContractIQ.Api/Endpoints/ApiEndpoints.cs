@@ -4,6 +4,8 @@ using ContractIQ.Application.Contracts.AssessCancellation;
 using ContractIQ.Application.Contracts.GetContractDetails;
 using ContractIQ.Application.Contracts.ListCustomerContracts;
 using ContractIQ.Application.Customers.ListCustomers;
+using ContractIQ.Application.Knowledge;
+using ContractIQ.Application.Knowledge.Search;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ContractIQ.Api.Endpoints;
@@ -57,6 +59,16 @@ public static class ApiEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
+
+        api.MapPost("/knowledge/search", SearchKnowledgeAsync)
+            .WithName("SearchKnowledge")
+            .WithTags("Knowledge")
+            .WithSummary("Searches contract and policy evidence using local hybrid retrieval.")
+            .WithDescription(
+                "Applies customer and contract scope before fusing PostgreSQL lexical and vector rankings.")
+            .Produces<KnowledgeEvidence[]>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         return endpoints;
     }
@@ -121,4 +133,28 @@ public static class ApiEndpoints
             ? Results.Ok(result.Request)
             : Results.Json(result.Request, statusCode: StatusCodes.Status201Created);
     }
+
+    private static async Task<IResult> SearchKnowledgeAsync(
+        SearchKnowledgeRequest request,
+        SearchKnowledgeHandler handler,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyList<KnowledgeEvidence> evidence = await handler.HandleAsync(
+            new SearchKnowledgeQuery(
+                request.Query,
+                request.CustomerId,
+                request.ContractId,
+                request.AsOf,
+                request.Limit ?? 5),
+            cancellationToken);
+
+        return Results.Ok(evidence);
+    }
+
+    private sealed record SearchKnowledgeRequest(
+        string Query,
+        Guid CustomerId,
+        Guid ContractId,
+        DateOnly? AsOf,
+        int? Limit);
 }

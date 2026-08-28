@@ -12,6 +12,8 @@ This guide describes the shared development workflow for ContractIQ. The project
 
 An Azure subscription is not required. PostgreSQL, pgvector, the backend, and the frontend all run locally.
 
+Ollama is optional. It is needed only when indexing sample documents or exercising the knowledge-search endpoint; the deterministic contract operations continue to work without it.
+
 ## Start the local database
 
 The Compose service uses PostgreSQL 18 with pgvector 0.8.6 and persists its data in the named volume `contractiq-postgres-data`. Its port is published only on `127.0.0.1`.
@@ -149,6 +151,27 @@ dotnet run --project src/ContractIQ.Api
 ```
 
 The API listens on `http://localhost:5186` by default. Use the executable request collection at `src/ContractIQ.Api/ContractIQ.Api.http` or see the [contract operation API guide](api/contract-operations.md) for the seeded demonstration flow.
+
+## Run local knowledge retrieval
+
+The `local-ai` Compose profile keeps the model runtime optional. Start it together with PostgreSQL:
+
+```powershell
+docker compose --profile local-ai up -d postgres ollama
+docker compose exec ollama ollama pull embeddinggemma
+```
+
+The first pull downloads the local embedding model to the named volume `contractiq-ollama-data`. It does not create an Azure resource or token charge, but it uses local disk, memory, and CPU.
+
+Index the committed fictional documents:
+
+```powershell
+dotnet run --project tools/ContractIQ.DocumentIndexer
+```
+
+Run the same command again to verify idempotency. Unchanged document versions are skipped by content checksum. Then start the API and execute the knowledge-search request in `src/ContractIQ.Api/ContractIQ.Api.http`.
+
+See [Local knowledge retrieval](knowledge/local-retrieval.md) for the request contract, citation fields, ranking design, and troubleshooting.
 
 In a second terminal, start the React application:
 
