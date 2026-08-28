@@ -5,7 +5,7 @@ namespace ContractIQ.Application.Knowledge.Search;
 public sealed class SearchKnowledgeHandler(
     IKnowledgeEmbeddingGenerator embeddingGenerator,
     IKnowledgeIndex knowledgeIndex,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider) : IKnowledgeSearch
 {
     public async Task<IReadOnlyList<KnowledgeEvidence>> HandleAsync(
         SearchKnowledgeQuery query,

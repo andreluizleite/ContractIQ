@@ -1,5 +1,7 @@
 using ContractIQ.Application.Abstractions.Persistence;
+using ContractIQ.Application.Assistant;
 using ContractIQ.Application.Knowledge;
+using ContractIQ.Infrastructure.Assistant;
 using ContractIQ.Infrastructure.Knowledge;
 using ContractIQ.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +26,8 @@ public static class DependencyInjection
                 $"Connection string '{ConnectionStringName}' is not configured.");
 
         KnowledgeOptions knowledgeOptions = KnowledgeOptions.FromConfiguration(configuration);
-        return services.AddInfrastructure(connectionString, knowledgeOptions);
+        AssistantOptions assistantOptions = AssistantOptions.FromConfiguration(configuration);
+        return services.AddInfrastructure(connectionString, knowledgeOptions, assistantOptions);
     }
 
     public static IServiceCollection AddInfrastructure(
@@ -37,13 +40,34 @@ public static class DependencyInjection
                 "sample-data/knowledge",
                 new Uri("http://localhost:11434"),
                 "embeddinggemma",
-                768));
+                768),
+            new AssistantOptions(
+                new Uri("http://localhost:11434"),
+                "qwen3:4b",
+                600,
+                0.1f));
     }
 
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         string connectionString,
         KnowledgeOptions knowledgeOptions)
+    {
+        return services.AddInfrastructure(
+            connectionString,
+            knowledgeOptions,
+            new AssistantOptions(
+                new Uri("http://localhost:11434"),
+                "qwen3:4b",
+                600,
+                0.1f));
+    }
+
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        string connectionString,
+        KnowledgeOptions knowledgeOptions,
+        AssistantOptions assistantOptions)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
@@ -69,6 +93,8 @@ public static class DependencyInjection
         services.AddSingleton(knowledgeOptions);
         services.AddSingleton<IKnowledgeDocumentCatalog, FileSystemKnowledgeDocumentCatalog>();
         services.AddSingleton<IKnowledgeEmbeddingGenerator, OllamaKnowledgeEmbeddingGenerator>();
+        services.AddSingleton(assistantOptions);
+        services.AddSingleton<IAssistantAnswerGenerator, OllamaAssistantAnswerGenerator>();
 
         return services;
     }

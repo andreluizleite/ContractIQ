@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using ContractIQ.Api.Endpoints;
 using ContractIQ.Api.Errors;
 using ContractIQ.Api.Health;
+using ContractIQ.Application.Assistant;
 using ContractIQ.Application.Cancellations.CreateCancellationRequest;
 using ContractIQ.Application.Contracts.AssessCancellation;
 using ContractIQ.Application.Contracts.GetContractDetails;
@@ -31,7 +32,9 @@ builder.Services.AddScoped<ListCustomerContractsHandler>();
 builder.Services.AddScoped<AssessCancellationHandler>();
 builder.Services.AddScoped<CreateCancellationRequestHandler>();
 builder.Services.AddSingleton<MarkdownKnowledgeChunker>();
-builder.Services.AddScoped<SearchKnowledgeHandler>();
+builder.Services.AddScoped<IKnowledgeSearch, SearchKnowledgeHandler>();
+builder.Services.AddSingleton<GroundedAnswerPromptBuilder>();
+builder.Services.AddScoped<AskContractQuestionHandler>();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();

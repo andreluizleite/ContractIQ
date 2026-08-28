@@ -1,4 +1,5 @@
 using ContractIQ.Application.Abstractions.Persistence;
+using ContractIQ.Application.Assistant;
 using ContractIQ.Application.Knowledge;
 using ContractIQ.Application.Knowledge.Indexing;
 using ContractIQ.Infrastructure;
@@ -79,8 +80,10 @@ internal sealed class ContractIqApiFactory(
 
             services.RemoveAll<IKnowledgeEmbeddingGenerator>();
             services.RemoveAll<IKnowledgeDocumentCatalog>();
+            services.RemoveAll<IAssistantAnswerGenerator>();
             services.AddSingleton<IKnowledgeEmbeddingGenerator, DeterministicEmbeddingGenerator>();
             services.AddSingleton<IKnowledgeDocumentCatalog, TestKnowledgeDocumentCatalog>();
+            services.AddSingleton<IAssistantAnswerGenerator, DeterministicAnswerGenerator>();
             services.AddScoped<IndexKnowledgeDocumentsHandler>();
 
             services.RemoveAll<TimeProvider>();
@@ -124,6 +127,24 @@ internal sealed class ContractIqApiFactory(
             }
 
             return embedding;
+        }
+    }
+
+    private sealed class DeterministicAnswerGenerator : IAssistantAnswerGenerator
+    {
+        public Task<GeneratedAssistantAnswer> GenerateAsync(
+            AssistantPrompt prompt,
+            CancellationToken cancellationToken = default)
+        {
+            string answer = prompt.UserPrompt.Contains(
+                "Brazilian Portuguese",
+                StringComparison.Ordinal)
+                ? "A ACME pode solicitar o cancelamento. A multa determinística está na avaliação [1]."
+                : "ACME can request cancellation. The deterministic penalty is shown in the assessment [1].";
+
+            return Task.FromResult(new GeneratedAssistantAnswer(
+                answer,
+                "integration-test-chat"));
         }
     }
 

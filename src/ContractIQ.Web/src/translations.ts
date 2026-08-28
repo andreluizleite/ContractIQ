@@ -54,6 +54,20 @@ const english = {
   apiUnavailable:
     'The API is unavailable. Confirm that the .NET API and PostgreSQL are running.',
   conflict: 'A cancellation request is already open for this contract.',
+  assistantTitle: 'Ask ContractIQ',
+  assistantDescription:
+    'Get a grounded explanation from deterministic data and cited contract evidence.',
+  assistantQuestionLabel: 'Contract question',
+  assistantPlaceholder: 'Can this contract be cancelled now and what penalty applies?',
+  askAssistant: 'Ask assistant',
+  askingAssistant: 'Reviewing evidence…',
+  assistantAnswer: 'Grounded answer',
+  assistantSources: 'Sources',
+  insufficientEvidence: 'Insufficient contract evidence',
+  assistantUnavailable:
+    'The local AI models are unavailable. Confirm that Ollama, embeddinggemma, and qwen3:4b are installed.',
+  page: 'page',
+  version: 'version',
   footerPrinciple: 'AI assists. Domain rules decide.',
   statusLabels: {
     active: 'Active',
@@ -122,6 +136,20 @@ const portuguese: typeof english = {
     'A API está indisponível. Confirme que a API .NET e o PostgreSQL estão em execução.',
   conflict:
     'Já existe uma solicitação de cancelamento aberta para este contrato.',
+  assistantTitle: 'Pergunte ao ContractIQ',
+  assistantDescription:
+    'Receba uma explicação fundamentada em dados determinísticos e evidências contratuais citadas.',
+  assistantQuestionLabel: 'Pergunta sobre o contrato',
+  assistantPlaceholder: 'Este contrato pode ser cancelado agora e qual multa se aplica?',
+  askAssistant: 'Perguntar ao assistente',
+  askingAssistant: 'Analisando evidências…',
+  assistantAnswer: 'Resposta fundamentada',
+  assistantSources: 'Fontes',
+  insufficientEvidence: 'Evidência contratual insuficiente',
+  assistantUnavailable:
+    'Os modelos locais de IA estão indisponíveis. Confirme que Ollama, embeddinggemma e qwen3:4b estão instalados.',
+  page: 'página',
+  version: 'versão',
   footerPrinciple: 'A IA auxilia. As regras de domínio decidem.',
   statusLabels: {
     active: 'Ativo',

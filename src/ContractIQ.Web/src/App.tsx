@@ -5,6 +5,7 @@ import {
   contractIqApi,
   type CancellationAssessment,
   type CancellationRequest,
+  type ContractAnswer,
   type ContractDetails,
   type ContractSummary,
   type CustomerSummary,
@@ -76,6 +77,10 @@ export function App() {
   const [submitting, setSubmitting] = useState(false)
   const [createdRequest, setCreatedRequest] = useState<CancellationRequest>()
   const [idempotencyKey, setIdempotencyKey] = useState<string>()
+  const [assistantQuestion, setAssistantQuestion] = useState('')
+  const [assistantAnswer, setAssistantAnswer] = useState<ContractAnswer>()
+  const [assistantError, setAssistantError] = useState<string>()
+  const [askingAssistant, setAskingAssistant] = useState(false)
   const copy = translations[language]
 
   const selectedCustomer = useMemo(
@@ -145,6 +150,8 @@ export function App() {
 
   function changeLanguage(nextLanguage: Language) {
     setLanguage(nextLanguage)
+    setAssistantAnswer(undefined)
+    setAssistantError(undefined)
     document.documentElement.lang = nextLanguage
   }
 
@@ -154,12 +161,14 @@ export function App() {
     setSelectedContractId(undefined)
     setWorkspace(null)
     setCreatedRequest(undefined)
+    resetAssistant()
   }
 
   function selectContract(contractId: string) {
     setSelectedContractId(contractId)
     setWorkspace(initialLoad)
     setCreatedRequest(undefined)
+    resetAssistant()
   }
 
   function retryCustomers() {
@@ -214,6 +223,40 @@ export function App() {
       setConfirmationError(errorMessage(error, language))
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  function resetAssistant() {
+    setAssistantQuestion('')
+    setAssistantAnswer(undefined)
+    setAssistantError(undefined)
+  }
+
+  async function askAssistant() {
+    if (!selectedCustomerId || !selectedContractId || assistantQuestion.trim().length < 3) {
+      return
+    }
+
+    setAskingAssistant(true)
+    setAssistantAnswer(undefined)
+    setAssistantError(undefined)
+
+    try {
+      const answer = await contractIqApi.askContractQuestion(
+        assistantQuestion.trim(),
+        selectedCustomerId,
+        selectedContractId,
+        language,
+      )
+      setAssistantAnswer(answer)
+    } catch (error) {
+      setAssistantError(
+        error instanceof ApiError && error.status === 503
+          ? copy.assistantUnavailable
+          : errorMessage(error, language),
+      )
+    } finally {
+      setAskingAssistant(false)
     }
   }
 
@@ -380,13 +423,24 @@ export function App() {
                 )}
 
                 {workspace?.status === 'ready' && (
-                  <ContractWorkspaceView
-                    assessment={workspace.data.assessment}
-                    contract={workspace.data.details}
-                    createdRequest={createdRequest}
-                    language={language}
-                    onCreateRequest={openConfirmation}
-                  />
+                  <>
+                    <ContractWorkspaceView
+                      assessment={workspace.data.assessment}
+                      contract={workspace.data.details}
+                      createdRequest={createdRequest}
+                      language={language}
+                      onCreateRequest={openConfirmation}
+                    />
+                    <AssistantPanel
+                      answer={assistantAnswer}
+                      error={assistantError}
+                      isLoading={askingAssistant}
+                      language={language}
+                      onAsk={askAssistant}
+                      onQuestionChange={setAssistantQuestion}
+                      question={assistantQuestion}
+                    />
+                  </>
                 )}
               </>
             )}
@@ -466,6 +520,100 @@ export function App() {
         </div>
       )}
     </div>
+  )
+}
+
+function AssistantPanel({
+  answer,
+  error,
+  isLoading,
+  language,
+  onAsk,
+  onQuestionChange,
+  question,
+}: {
+  answer?: ContractAnswer
+  error?: string
+  isLoading: boolean
+  language: Language
+  onAsk: () => void
+  onQuestionChange: (value: string) => void
+  question: string
+}) {
+  const copy = translations[language]
+
+  return (
+    <article className="assistant-card">
+      <div className="assistant-heading">
+        <div>
+          <p className="step-number">03</p>
+          <h3>{copy.assistantTitle}</h3>
+        </div>
+        <span>AI + RAG</span>
+      </div>
+      <p className="assistant-description">{copy.assistantDescription}</p>
+
+      <label className="assistant-question">
+        <span>{copy.assistantQuestionLabel}</span>
+        <textarea
+          maxLength={1000}
+          onChange={(event) => onQuestionChange(event.target.value)}
+          placeholder={copy.assistantPlaceholder}
+          rows={3}
+          value={question}
+        />
+      </label>
+
+      <button
+        className="primary-button"
+        disabled={isLoading || question.trim().length < 3}
+        onClick={onAsk}
+        type="button"
+      >
+        {isLoading ? copy.askingAssistant : copy.askAssistant}
+      </button>
+
+      {error && (
+        <p className="inline-error" role="alert">
+          {error}
+        </p>
+      )}
+
+      {answer && (
+        <section
+          className="assistant-response"
+          data-grounded={answer.hasSufficientEvidence}
+          aria-live="polite"
+        >
+          <p className="assistant-response-label">
+            {answer.hasSufficientEvidence
+              ? copy.assistantAnswer
+              : copy.insufficientEvidence}
+          </p>
+          <p className="assistant-answer-text">{answer.answer}</p>
+
+          {answer.citations.length > 0 && (
+            <div className="citation-list">
+              <strong>{copy.assistantSources}</strong>
+              <ol>
+                {answer.citations.map((citation) => (
+                  <li key={`${citation.number}-${citation.documentKey}`}>
+                    <span>[{citation.number}]</span>
+                    <div>
+                      <strong>{citation.title}</strong>
+                      <small>
+                        {copy.version} {citation.version} · {citation.section} ·{' '}
+                        {copy.page} {citation.page}
+                      </small>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+        </section>
+      )}
+    </article>
   )
 }
 
