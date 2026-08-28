@@ -3,4 +3,10 @@
     <ProjectReference Include="..\ContractIQ.Application\ContractIQ.Application.csproj" />
     <ProjectReference Include="..\ContractIQ.Infrastructure\ContractIQ.Infrastructure.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <!-- Pins the patched 2.x line used transitively by ASP.NET Core OpenAPI. -->
+    <PackageReference Include="Microsoft.OpenApi" />
+  </ItemGroup>
 </Project>
