@@ -1,18 +1,19 @@
 # Contract operation API
 
-The first ContractIQ vertical slice exposes structured contract operations through a small CQRS application layer. It deliberately uses an in-memory adapter so that the business workflow can be demonstrated before PostgreSQL is introduced.
+The first ContractIQ vertical slice exposes structured contract operations through a small CQRS application layer. PostgreSQL persists customers, contracts, and cancellation requests; the domain and application layers remain independent of the database adapter.
 
 ## Run locally
 
-Start the API from the repository root:
+Start PostgreSQL and run the API from the repository root:
 
 ```powershell
+docker compose up -d postgres
 dotnet run --project src/ContractIQ.Api
 ```
 
-The default HTTP address is `http://localhost:5186`. Open `src/ContractIQ.Api/ContractIQ.Api.http` in Visual Studio and run the requests from top to bottom for a complete ACME cancellation scenario.
+The API applies pending migrations and seeds the fictional records idempotently before it starts accepting requests. The default HTTP address is `http://localhost:5186`. Open `src/ContractIQ.Api/ContractIQ.Api.http` in Visual Studio and run the requests from top to bottom for a complete ACME cancellation scenario.
 
-The in-memory state lasts for the lifetime of the API process. Restarting the API restores the original fictional data and clears cancellation requests.
+The seed operation is idempotent: restarting the API keeps cancellation requests and does not duplicate the fictional records. To restore a clean demo database, follow the volume-reset procedure in the [local development guide](../development.md).
 
 ## Available operations
 
@@ -47,6 +48,6 @@ The client supplies only the contract identifier and idempotency key. Dates, sta
 
 ## Architecture boundary
 
-The endpoint calls a focused command or query handler. Application ports hide persistence, while the domain owns cancellation calculations and invariants. The current in-memory implementation is an infrastructure adapter and will be replaced by PostgreSQL without changing the domain rules or HTTP contract.
+The endpoint calls a focused command or query handler. Application ports hide PostgreSQL and Entity Framework Core, while the domain owns cancellation calculations and invariants. Persistence can change without changing the domain rules or HTTP contract.
 
 This is also the boundary that a future AI tool will call: the model may choose the cancellation capability, but the same command handler remains the authority for validation and state changes.

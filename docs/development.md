@@ -7,15 +7,101 @@ This guide describes the shared development workflow for ContractIQ. The project
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - [Node.js 24 LTS](https://nodejs.org/)
 - npm, included with Node.js
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/), with Docker Compose
 - Git
 
-Docker Desktop will be required when PostgreSQL and the local infrastructure are introduced. It is not required for the initial solution and frontend checks.
+An Azure subscription is not required. PostgreSQL, pgvector, the backend, and the frontend all run locally.
+
+## Start the local database
+
+The Compose service uses PostgreSQL 18 with pgvector 0.8.6 and persists its data in the named volume `contractiq-postgres-data`. Its port is published only on `127.0.0.1`.
+
+The repository contains safe fictional defaults. To customize the port or local credentials, create an ignored `.env` file from the committed example:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Start the database and wait until its health check reports `healthy`:
+
+```powershell
+docker compose up -d postgres
+docker compose ps
+```
+
+The default connection string is:
+
+```text
+Host=localhost;Port=5432;Database=contractiq;Username=contractiq;Password=contractiq
+```
+
+The Development environment reads this default from `appsettings.Development.json`. Override it when necessary through the standard ASP.NET Core `ContractIQ` connection-string setting:
+
+```powershell
+$env:ConnectionStrings__ContractIQ = 'Host=localhost;Port=55432;Database=contractiq;Username=contractiq;Password=your-local-value'
+```
+
+If `.env` changes the database name, user, password, or port, update the connection string in the shell as well. A Compose `.env` file configures containers; it does not automatically export values to `dotnet run`.
+
+These public defaults are intentionally limited to local development. Do not reuse them in a shared or hosted environment.
+
+## Database migrations
+
+The API applies committed migrations and seed data during startup. To update the database without starting the API, restore the repository-pinned EF Core tool and run:
+
+```powershell
+dotnet tool restore
+dotnet ef database update --project src/ContractIQ.Infrastructure --context ContractIqDbContext
+```
+
+The initial migration creates the application schema and enables the `vector` extension. Verify the installed extension when diagnosing local setup:
+
+```powershell
+docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT extversion FROM pg_extension WHERE extname = ''vector'';"'
+```
+
+Create a migration only when intentionally changing the persistence model:
+
+```powershell
+dotnet ef migrations add <MigrationName> --project src/ContractIQ.Infrastructure --context ContractIqDbContext
+```
+
+Review generated migrations before committing them. Migrations and their model snapshot belong in the Infrastructure project; application startup applies committed migrations and seeds the fictional demo records idempotently.
+
+Stop the database while retaining its data:
+
+```powershell
+docker compose stop postgres
+```
+
+Remove the container and network while retaining the named volume:
+
+```powershell
+docker compose down
+```
+
+To deliberately reset all local database data, remove the volume and then recreate the service:
+
+```powershell
+docker compose down --volumes
+docker compose up -d postgres
+```
+
+`docker compose down --volumes` is destructive for the local ContractIQ database. It does not affect source files or any external database. The next API startup recreates the schema and fictional records.
+
+## Health behavior
+
+- `/health/live` reports whether the running process can serve requests and does not execute a database check.
+- `/health/ready` and the compatibility route `/health` include the `postgresql` check.
+
+Database initialization is intentionally fail-fast: if PostgreSQL is unavailable during startup, the API does not begin listening. After a successful startup, readiness reflects ongoing database availability while liveness remains independent of the database check.
 
 ## Restore dependencies
 
 From the repository root, restore the backend:
 
 ```powershell
+dotnet tool restore
 dotnet restore ContractIQ.slnx
 ```
 
@@ -85,9 +171,9 @@ Code should remain conventionally formatted and easy to scan. Comments should ex
 
 ## Local configuration and secrets
 
-Do not commit credentials, API keys, connection strings, access tokens, certificates, or populated `.env` files.
+Do not commit real credentials, API keys, hosted connection strings, access tokens, certificates, or populated `.env` files.
 
-When a component introduces local settings, commit a safe example such as `.env.example` and keep actual values in ignored local files, environment variables, or .NET user secrets. The default development path must continue to work without Microsoft Foundry or other paid Azure resources.
+The root `.gitignore` excludes `.env` and local settings while explicitly allowing `.env.example`. Keep actual values in ignored local files, environment variables, or .NET user secrets. The default development path must continue to work without Microsoft Foundry or other paid Azure resources.
 
 ## Troubleshooting
 
@@ -102,3 +188,14 @@ npm --version
 If `npm ci` reports that the lock file and manifest differ, do not bypass the error. Run `npm install` only when the dependency change is intentional, review the updated lock file, and commit both files.
 
 If CI reports formatting differences, run `dotnet format ContractIQ.slnx`, review the edits, and rerun the checks above.
+
+If PostgreSQL does not become healthy, inspect its status and logs:
+
+```powershell
+docker compose ps
+docker compose logs postgres
+```
+
+If port `5432` is already in use, change `CONTRACTIQ_POSTGRES_PORT` in `.env` and use the same port in `ConnectionStrings__ContractIQ`.
+
+If the API reports a missing table or relation, confirm that the database is healthy and restart the API so startup initialization can apply migrations.

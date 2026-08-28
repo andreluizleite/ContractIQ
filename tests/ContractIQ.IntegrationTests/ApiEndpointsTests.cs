@@ -1,14 +1,34 @@
 using System.Net;
 using System.Text.Json;
 using ContractIQ.Infrastructure;
+using ContractIQ.Infrastructure.Persistence;
+using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 using Xunit;
 
 namespace ContractIQ.IntegrationTests;
 
-public sealed class ApiEndpointsTests
+[Collection(PostgreSqlCollection.Name)]
+public sealed class ApiEndpointsTests(PostgreSqlFixture postgres) : IAsyncLifetime
 {
     private static readonly DateTimeOffset FrozenUtc =
         DateTimeOffset.Parse("2026-03-01T00:30:00Z");
+
+    private ContractIqApiFactory? _databaseFactory;
+
+    public async Task InitializeAsync()
+    {
+        _databaseFactory = CreateFactory();
+        await _databaseFactory.ResetAndSeedDatabaseAsync();
+    }
+
+    public async Task DisposeAsync()
+    {
+        if (_databaseFactory is not null)
+        {
+            await _databaseFactory.DisposeAsync();
+        }
+    }
 
     [Fact]
     public async Task Customers_endpoint_returns_the_ordered_demo_customers()
@@ -55,7 +75,10 @@ public sealed class ApiEndpointsTests
             TimeSpan.FromHours(-11),
             "UTC-11 integration test",
             "UTC-11 integration test");
-        using var factory = new ContractIqApiFactory(FrozenUtc, utcMinusEleven);
+        using var factory = new ContractIqApiFactory(
+            postgres.ConnectionString,
+            FrozenUtc,
+            utcMinusEleven);
         using var client = factory.CreateClient();
 
         using var response = await client.GetAsync(
@@ -323,7 +346,49 @@ public sealed class ApiEndpointsTests
             "OpenAPI must mark the Idempotency-Key header as required.");
     }
 
-    private static ContractIqApiFactory CreateFactory() => new(FrozenUtc);
+    [Fact]
+    public async Task PostgreSQL_seed_is_idempotent_and_pgvector_is_installed()
+    {
+        using (var scope = _databaseFactory!.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<ContractIqDbContext>();
+
+            await DemoDataSeeder.SeedAsync(dbContext, CancellationToken.None);
+            await DemoDataSeeder.SeedAsync(dbContext, CancellationToken.None);
+        }
+
+        await using var connection = new NpgsqlConnection(postgres.ConnectionString);
+        await connection.OpenAsync(CancellationToken.None);
+
+        Assert.Equal(3, await CountRowsAsync(connection, "customers"));
+        Assert.Equal(4, await CountRowsAsync(connection, "contracts"));
+
+        await using var vectorCommand = new NpgsqlCommand(
+            "SELECT COUNT(*) FROM pg_extension WHERE extname = 'vector';",
+            connection);
+        var vectorExtensionCount = (long)(await vectorCommand.ExecuteScalarAsync(
+            CancellationToken.None))!;
+
+        Assert.Equal(1, vectorExtensionCount);
+    }
+
+    private ContractIqApiFactory CreateFactory() =>
+        new(postgres.ConnectionString, FrozenUtc);
+
+    private static async Task<long> CountRowsAsync(
+        NpgsqlConnection connection,
+        string tableName)
+    {
+        string sql = tableName switch
+        {
+            "customers" => "SELECT COUNT(*) FROM customers;",
+            "contracts" => "SELECT COUNT(*) FROM contracts;",
+            _ => throw new ArgumentOutOfRangeException(nameof(tableName)),
+        };
+
+        await using var command = new NpgsqlCommand(sql, connection);
+        return (long)(await command.ExecuteScalarAsync(CancellationToken.None))!;
+    }
 
     private static async Task<HttpResponseMessage> PostCancellationAsync(
         HttpClient client,
