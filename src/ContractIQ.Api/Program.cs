@@ -2,11 +2,13 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using ContractIQ.Api.Endpoints;
 using ContractIQ.Api.Errors;
+using ContractIQ.Api.Health;
 using ContractIQ.Application.Cancellations.CreateCancellationRequest;
 using ContractIQ.Application.Contracts.AssessCancellation;
 using ContractIQ.Application.Contracts.GetContractDetails;
 using ContractIQ.Application.Customers.ListCustomers;
 using ContractIQ.Infrastructure;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,9 +26,11 @@ builder.Services.AddScoped<ListCustomersHandler>();
 builder.Services.AddScoped<GetContractDetailsHandler>();
 builder.Services.AddScoped<AssessCancellationHandler>();
 builder.Services.AddScoped<CreateCancellationRequestHandler>();
-builder.Services.AddInfrastructure();
+builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
+
+await app.Services.InitializeDatabaseAsync();
 
 app.UseExceptionHandler();
 
@@ -35,7 +39,19 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.MapHealthChecks("/health");
+var readinessOptions = new HealthCheckOptions
+{
+    Predicate = registration => registration.Tags.Contains("ready"),
+    ResponseWriter = HealthResponseWriter.WriteAsync,
+};
+
+app.MapHealthChecks("/health", readinessOptions);
+app.MapHealthChecks("/health/ready", readinessOptions);
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = _ => false,
+    ResponseWriter = HealthResponseWriter.WriteAsync,
+});
 app.MapApiV1();
 
 app.Run();

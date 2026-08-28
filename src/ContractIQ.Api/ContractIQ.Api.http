@@ -6,6 +6,12 @@
 ### Health check
 GET {{host}}/health
 
+### Liveness does not depend on PostgreSQL
+GET {{host}}/health/live
+
+### Readiness includes PostgreSQL availability
+GET {{host}}/health/ready
+
 ### List the fictional customers
 GET {{host}}/api/v1/customers
 Accept: application/json
