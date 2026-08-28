@@ -55,4 +55,3 @@ An issue is done when:
 - the pull request contains verification evidence;
 - the change is merged through a linked pull request;
 - the source branch is removed.
-

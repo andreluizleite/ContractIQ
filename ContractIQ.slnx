@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ContractIQ.Api/ContractIQ.Api.csproj" />
+    <Project Path="src/ContractIQ.Application/ContractIQ.Application.csproj" />
+    <Project Path="src/ContractIQ.Domain/ContractIQ.Domain.csproj" />
+    <Project Path="src/ContractIQ.Infrastructure/ContractIQ.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ContractIQ.Application.Tests/ContractIQ.Application.Tests.csproj" />
+    <Project Path="tests/ContractIQ.Domain.Tests/ContractIQ.Domain.Tests.csproj" />
+    <Project Path="tests/ContractIQ.IntegrationTests/ContractIQ.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

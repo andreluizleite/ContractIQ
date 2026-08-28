@@ -31,4 +31,3 @@ body:
       description: How will completion be demonstrated in the pull request?
     validations:
       required: true
-

@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\ContractIQ.Domain\ContractIQ.Domain.csproj" />
+  </ItemGroup>
+</Project>

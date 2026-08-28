@@ -110,4 +110,3 @@ A change is complete when:
 - telemetry and failure behavior were considered;
 - the pull request contains reproducible evidence;
 - all required checks pass.
-

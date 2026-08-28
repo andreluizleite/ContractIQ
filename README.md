@@ -34,9 +34,8 @@ Cancellation eligibility, dates, penalties, validation, authorization, idempoten
 
 ## Local setup
 
-Local setup instructions will be added with the first executable vertical slice. The default experience will not require an Azure subscription.
+See the [local development guide](docs/development.md) for prerequisites and the commands used by continuous integration. The default experience does not require an Azure subscription.
 
 ## Disclaimer
 
 ContractIQ uses fictional companies, contracts, policies, and rules. It is a software engineering demonstration and does not provide legal advice.
-
