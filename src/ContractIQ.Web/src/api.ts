@@ -49,6 +49,25 @@ export type CancellationRequest = {
   status: 'pendingReview'
 }
 
+export type AssistantCitation = {
+  number: number
+  documentKey: string
+  title: string
+  version: string
+  section: string
+  page: number
+  sourcePath: string
+}
+
+export type ContractAnswer = {
+  answer: string
+  language: 'en' | 'pt-BR'
+  hasSufficientEvidence: boolean
+  assessment: CancellationAssessment
+  citations: AssistantCitation[]
+  modelId: string | null
+}
+
 type ProblemDetails = {
   detail?: string
   code?: string
@@ -139,5 +158,20 @@ export const contractIqApi = {
         },
       },
     )
+  },
+
+  askContractQuestion(
+    question: string,
+    customerId: string,
+    contractId: string,
+    language: 'en' | 'pt-BR',
+  ) {
+    return request<ContractAnswer>('/api/v1/assistant/answers', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ question, customerId, contractId, language }),
+    })
   },
 }

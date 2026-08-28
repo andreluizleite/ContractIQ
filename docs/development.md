@@ -159,9 +159,10 @@ The `local-ai` Compose profile keeps the model runtime optional. Start it togeth
 ```powershell
 docker compose --profile local-ai up -d postgres ollama
 docker compose exec ollama ollama pull embeddinggemma
+docker compose exec ollama ollama pull qwen3:4b
 ```
 
-The first pull downloads the local embedding model to the named volume `contractiq-ollama-data`. It does not create an Azure resource or token charge, but it uses local disk, memory, and CPU.
+The pulls download the local embedding model and conversational model to the named volume `contractiq-ollama-data`. They do not create an Azure resource or token charge, but they use local disk, memory, and CPU. `embeddinggemma` is approximately 622 MB and `qwen3:4b` is approximately 2.5 GB.
 
 Index the committed fictional documents:
 
@@ -169,9 +170,9 @@ Index the committed fictional documents:
 dotnet run --project tools/ContractIQ.DocumentIndexer
 ```
 
-Run the same command again to verify idempotency. Unchanged document versions are skipped by content checksum. Then start the API and execute the knowledge-search request in `src/ContractIQ.Api/ContractIQ.Api.http`.
+Run the same command again to verify idempotency. Unchanged document versions are skipped by content checksum. Then start the API and execute the knowledge-search and grounded-assistant requests in `src/ContractIQ.Api/ContractIQ.Api.http`.
 
-See [Local knowledge retrieval](knowledge/local-retrieval.md) for the request contract, citation fields, ranking design, and troubleshooting.
+See [Local knowledge retrieval](knowledge/local-retrieval.md) for ranking and indexing details, and [Grounded contract assistant](assistant/grounded-answers.md) for generation, citations, refusal behavior, and safety boundaries.
 
 In a second terminal, start the React application:
 

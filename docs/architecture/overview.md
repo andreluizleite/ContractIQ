@@ -39,7 +39,9 @@ Customer, contract, and effective-date filters are applied before ranking. Postg
 
 ### Assistant orchestration
 
-Assistant orchestration resolves user intent, calls queries and commands through explicit application tools, retrieves supporting evidence, and generates a bilingual response. It is an application concern rather than a separate service.
+Assistant orchestration is an application concern rather than a separate service. The current read-only flow validates customer and contract scope, calculates the deterministic cancellation assessment, retrieves supporting evidence, refuses when no applicable contract clause is available, and asks a provider-neutral answer generator for a bilingual explanation.
+
+The local adapter uses `IChatClient` through Ollama. Citations are assembled by the application from retrieved metadata rather than invented by the model. State-changing tool calling remains a separate delivery with an explicit confirmation boundary.
 
 ## Dependency rule
 

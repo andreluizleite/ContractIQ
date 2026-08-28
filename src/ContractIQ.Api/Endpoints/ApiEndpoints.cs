@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using ContractIQ.Application.Assistant;
 using ContractIQ.Application.Cancellations.CreateCancellationRequest;
 using ContractIQ.Application.Contracts.AssessCancellation;
 using ContractIQ.Application.Contracts.GetContractDetails;
@@ -70,6 +71,17 @@ public static class ApiEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        api.MapPost("/assistant/answers", AskContractQuestionAsync)
+            .WithName("AskContractQuestion")
+            .WithTags("Assistant")
+            .WithSummary("Answers a contract question with deterministic assessment and citations.")
+            .WithDescription(
+                "Retrieval is read-only and untrusted. Eligibility, dates, and penalties come from domain rules.")
+            .Produces<ContractAnswer>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         return endpoints;
     }
 
@@ -136,7 +148,7 @@ public static class ApiEndpoints
 
     private static async Task<IResult> SearchKnowledgeAsync(
         SearchKnowledgeRequest request,
-        SearchKnowledgeHandler handler,
+        IKnowledgeSearch handler,
         CancellationToken cancellationToken)
     {
         IReadOnlyList<KnowledgeEvidence> evidence = await handler.HandleAsync(
@@ -151,10 +163,32 @@ public static class ApiEndpoints
         return Results.Ok(evidence);
     }
 
+    private static async Task<IResult> AskContractQuestionAsync(
+        AskContractQuestionRequest request,
+        AskContractQuestionHandler handler,
+        CancellationToken cancellationToken)
+    {
+        ContractAnswer answer = await handler.HandleAsync(
+            new AskContractQuestionCommand(
+                request.Question,
+                request.CustomerId,
+                request.ContractId,
+                request.Language),
+            cancellationToken);
+
+        return Results.Ok(answer);
+    }
+
     private sealed record SearchKnowledgeRequest(
         string Query,
         Guid CustomerId,
         Guid ContractId,
         DateOnly? AsOf,
         int? Limit);
+
+    private sealed record AskContractQuestionRequest(
+        string Question,
+        Guid CustomerId,
+        Guid ContractId,
+        string Language);
 }

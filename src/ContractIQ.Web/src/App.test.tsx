@@ -63,6 +63,28 @@ function createApiMock() {
       return response(contractDetails)
     }
 
+    if (path === '/api/v1/assistant/answers' && init?.method === 'POST') {
+      return response({
+        answer:
+          'ACME can request cancellation. The deterministic penalty applies [1].',
+        language: 'en',
+        hasSufficientEvidence: true,
+        assessment,
+        modelId: 'test-chat-model',
+        citations: [
+          {
+            number: 1,
+            documentKey: 'contract-acme',
+            title: 'ACME Agreement',
+            version: '2.0',
+            section: 'Termination for convenience',
+            page: 2,
+            sourcePath: 'contracts/acme-v2.md',
+          },
+        ],
+      })
+    }
+
     if (
       path === `/api/v1/contracts/${contract.id}/cancellation-requests` &&
       init?.method === 'POST'
@@ -177,6 +199,39 @@ describe('App', () => {
     expect(
       await screen.findByText('This customer has no contracts.'),
     ).toBeInTheDocument()
+  })
+
+  it('asks a grounded contract question and renders its citation', async () => {
+    const user = userEvent.setup()
+    const fetchMock = createApiMock()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<App />)
+
+    await user.click(
+      await screen.findByRole('button', { name: /ACME Corporation/ }),
+    )
+    await user.click(await screen.findByRole('button', { name: /AAAAAAAA/ }))
+    await screen.findByRole('heading', { name: 'Cancellation is available' })
+
+    await user.type(
+      screen.getByLabelText('Contract question'),
+      'Can ACME cancel now?',
+    )
+    await user.click(screen.getByRole('button', { name: 'Ask assistant' }))
+
+    expect(await screen.findByText('Grounded answer')).toBeInTheDocument()
+    expect(screen.getByText(/ACME can request cancellation/)).toBeInTheDocument()
+    expect(screen.getByText('ACME Agreement')).toBeInTheDocument()
+    expect(
+      screen.getByText(/version 2.0 · Termination for convenience · page 2/),
+    ).toBeInTheDocument()
+
+    const assistantCall = fetchMock.mock.calls.find(
+      ([path]) => String(path) === '/api/v1/assistant/answers',
+    )
+    expect(JSON.parse(String(assistantCall?.[1]?.body))).toEqual(
+      expect.objectContaining({ language: 'en' }),
+    )
   })
 
   it('shows a recoverable error when the API is unavailable', async () => {

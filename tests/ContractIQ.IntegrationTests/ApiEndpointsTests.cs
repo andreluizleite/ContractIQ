@@ -347,6 +347,7 @@ public sealed class ApiEndpointsTests(PostgreSqlFixture postgres) : IAsyncLifeti
             "/api/v1/contracts/{contractId}/cancellation-assessment",
             "/api/v1/contracts/{contractId}/cancellation-requests",
             "/api/v1/knowledge/search",
+            "/api/v1/assistant/answers",
         ];
 
         Assert.Equal(expectedPaths.Length, paths.EnumerateObject().Count());
@@ -442,6 +443,76 @@ public sealed class ApiEndpointsTests(PostgreSqlFixture postgres) : IAsyncLifeti
             "forty percent",
             contractEvidence.GetProperty("content").GetString(),
             StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", "ACME can request cancellation.")]
+    [InlineData("pt-BR", "A ACME pode solicitar o cancelamento.")]
+    public async Task Assistant_returns_bilingual_grounded_answer_assessment_and_citations(
+        string language,
+        string expectedAnswer)
+    {
+        await _databaseFactory!.IndexKnowledgeDocumentsAsync();
+        using var client = _databaseFactory.CreateClient();
+
+        using var response = await client.PostAsJsonAsync(
+            "/api/v1/assistant/answers",
+            new
+            {
+                Question = language == "en"
+                    ? "Can ACME cancel now and what penalty applies?"
+                    : "A ACME pode cancelar agora e qual multa se aplica?",
+                CustomerId = DemoDataIds.AcmeCustomer,
+                ContractId = DemoDataIds.AcmeActiveContract,
+                Language = language,
+            },
+            CancellationToken.None);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = await ReadJsonAsync(response);
+        JsonElement answer = document.RootElement;
+        Assert.True(answer.GetProperty("hasSufficientEvidence").GetBoolean());
+        Assert.Equal(language, answer.GetProperty("language").GetString());
+        Assert.Contains(expectedAnswer, answer.GetProperty("answer").GetString());
+        Assert.Equal("integration-test-chat", answer.GetProperty("modelId").GetString());
+        Assert.Equal(
+            6_600m,
+            answer.GetProperty("assessment").GetProperty("penalty").GetProperty("amount").GetDecimal());
+
+        JsonElement citation = answer.GetProperty("citations").EnumerateArray().First();
+        Assert.Equal(1, citation.GetProperty("number").GetInt32());
+        Assert.Equal("contract-acme", citation.GetProperty("documentKey").GetString());
+        Assert.Equal("1.0", citation.GetProperty("version").GetString());
+        Assert.Equal("Termination for convenience", citation.GetProperty("section").GetString());
+        Assert.Equal(2, citation.GetProperty("page").GetInt32());
+    }
+
+    [Fact]
+    public async Task Assistant_states_when_contract_evidence_is_insufficient()
+    {
+        await _databaseFactory!.IndexKnowledgeDocumentsAsync();
+        using var client = _databaseFactory.CreateClient();
+
+        using var response = await client.PostAsJsonAsync(
+            "/api/v1/assistant/answers",
+            new
+            {
+                Question = "A Initech pode cancelar este contrato?",
+                CustomerId = DemoDataIds.InitechCustomer,
+                ContractId = DemoDataIds.InitechCancelledContract,
+                Language = "pt-BR",
+            },
+            CancellationToken.None);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = await ReadJsonAsync(response);
+        JsonElement answer = document.RootElement;
+        Assert.False(answer.GetProperty("hasSufficientEvidence").GetBoolean());
+        Assert.Contains(
+            "Não posso responder com segurança",
+            answer.GetProperty("answer").GetString());
+        Assert.Empty(answer.GetProperty("citations").EnumerateArray());
+        Assert.Equal(JsonValueKind.Null, answer.GetProperty("modelId").ValueKind);
     }
 
     [Fact]

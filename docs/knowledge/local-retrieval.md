@@ -2,7 +2,7 @@
 
 This delivery adds a complete retrieval slice without requiring Azure. It ingests fictional Markdown contracts and policies, produces multilingual embeddings through Ollama, stores chunks in PostgreSQL with pgvector, and returns scoped evidence with citation metadata.
 
-It is retrieval, not the final conversational assistant. The later assistant will combine these citations with structured contract data and deterministic cancellation assessments.
+Retrieval remains a separate responsibility from conversational generation. The grounded assistant combines these citations with structured contract data and deterministic cancellation assessments.
 
 ## Flow
 
@@ -36,7 +36,7 @@ docker compose up -d postgres
 dotnet run --project src/ContractIQ.Api
 ```
 
-In that mode, contract and cancellation endpoints work normally. Knowledge search returns `503 ollama_unavailable` until Ollama and the model are available.
+In that mode, contract and cancellation endpoints work normally. Knowledge search returns `503 ollama_unavailable` until Ollama and the embedding model are available. The grounded assistant additionally requires the configured chat model documented in [Grounded contract assistant](../assistant/grounded-answers.md).
 
 ## Search request
 
@@ -54,7 +54,7 @@ In that mode, contract and cancellation endpoints work normally. Knowledge searc
 
 `asOf` is optional and defaults to the server's current UTC date. `limit` defaults to 5 and accepts values from 1 through 20.
 
-Each result includes the document key, title, type, version, language, source path, section, page, content, fused score, and available lexical/vector scores. Those fields are the citation contract for the future assistant and React experience.
+Each result includes the document key, title, type, version, language, source path, section, page, content, fused score, and available lexical/vector scores. Those fields are the citation contract used by the grounded assistant and React experience.
 
 ## PostgreSQL lexical search is not BM25
 
