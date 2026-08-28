@@ -6,7 +6,7 @@ The application answers contract questions using structured business data, deter
 
 ## Project status
 
-The foundation and first deterministic contract-cancellation vertical slice are implemented. Delivery is tracked through GitHub Issues, milestones, short-lived branches, and linked pull requests.
+The foundation and first deterministic contract-cancellation vertical slice are implemented with PostgreSQL persistence and real integration tests. Delivery is tracked through GitHub Issues, milestones, short-lived branches, and linked pull requests.
 
 ## Planned technology
 
@@ -35,7 +35,16 @@ Cancellation eligibility, dates, penalties, validation, authorization, idempoten
 
 ## Local setup
 
-See the [local development guide](docs/development.md) for prerequisites and the commands used by continuous integration. The default experience does not require an Azure subscription.
+The default experience does not require an Azure subscription. Start PostgreSQL and pgvector, then run the API:
+
+```powershell
+docker compose up -d postgres
+dotnet run --project src/ContractIQ.Api
+```
+
+The API applies committed migrations and idempotent fictional seed data during startup. The database port is bound to the local machine only. The committed credentials are fictional and intended exclusively for local development.
+
+See the [local development guide](docs/development.md) for first-time setup, frontend commands, database lifecycle, migrations, and troubleshooting.
 
 ## Disclaimer
 

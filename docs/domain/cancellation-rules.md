@@ -41,4 +41,4 @@ For a monthly fee of `USD 100.00`, a penalty rate of `25%`, and two chargeable p
 
 ## Explicitly outside this increment
 
-This first model does not cover business-day calendars, taxes, currency conversion, negotiated waivers, automatic renewals, prorated billing, or cancellation-request persistence. Those behaviors must be introduced only with explicit business rules and tests.
+This first model does not cover business-day calendars, taxes, currency conversion, negotiated waivers, automatic renewals, prorated billing, or cancellation-request approval transitions. Those behaviors must be introduced only with explicit business rules and tests.

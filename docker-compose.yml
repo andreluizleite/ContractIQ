@@ -1,0 +1,22 @@
+name: contractiq
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.6-pg18-trixie
+    environment:
+      POSTGRES_DB: ${CONTRACTIQ_POSTGRES_DB:-contractiq}
+      POSTGRES_USER: ${CONTRACTIQ_POSTGRES_USER:-contractiq}
+      POSTGRES_PASSWORD: ${CONTRACTIQ_POSTGRES_PASSWORD:-contractiq}
+    ports:
+      - "127.0.0.1:${CONTRACTIQ_POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - contractiq-postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  contractiq-postgres-data:
