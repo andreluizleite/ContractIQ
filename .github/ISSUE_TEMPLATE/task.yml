@@ -1,0 +1,34 @@
+name: Engineering task
+description: Track a focused engineering or documentation outcome
+title: "[Task]: "
+labels:
+  - "type: chore"
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Why is this task needed now?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] Observable result one
+        - [ ] Observable result two
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and constraints
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification approach
+      description: How will completion be demonstrated in the pull request?
+    validations:
+      required: true
+
