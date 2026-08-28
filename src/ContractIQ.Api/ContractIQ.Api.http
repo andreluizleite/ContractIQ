@@ -1,0 +1,43 @@
+@host = http://localhost:5186
+@acmeContractId = aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+@cancelledContractId = cccccccc-cccc-4ccc-8ccc-cccccccccccc
+@idempotencyKey = demo-acme-cancellation-001
+
+### Health check
+GET {{host}}/health
+
+### List the fictional customers
+GET {{host}}/api/v1/customers
+Accept: application/json
+
+### Get ACME's structured contract data
+GET {{host}}/api/v1/contracts/{{acmeContractId}}
+Accept: application/json
+
+### Ask the domain model to assess ACME's cancellation
+GET {{host}}/api/v1/contracts/{{acmeContractId}}/cancellation-assessment
+Accept: application/json
+
+### Create ACME's cancellation request in PendingReview
+POST {{host}}/api/v1/contracts/{{acmeContractId}}/cancellation-requests
+Idempotency-Key: {{idempotencyKey}}
+Accept: application/json
+
+### Replay the same operation safely; returns the original request
+POST {{host}}/api/v1/contracts/{{acmeContractId}}/cancellation-requests
+Idempotency-Key: {{idempotencyKey}}
+Accept: application/json
+
+### A different key cannot create a second open request; returns 409
+POST {{host}}/api/v1/contracts/{{acmeContractId}}/cancellation-requests
+Idempotency-Key: demo-acme-cancellation-002
+Accept: application/json
+
+### An inactive contract cannot receive a cancellation request; returns 409
+POST {{host}}/api/v1/contracts/{{cancelledContractId}}/cancellation-requests
+Idempotency-Key: demo-inactive-contract-001
+Accept: application/json
+
+### OpenAPI document, available in Development
+GET {{host}}/openapi/v1.json
+Accept: application/json

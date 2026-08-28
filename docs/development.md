@@ -56,6 +56,14 @@ dotnet build ContractIQ.slnx
 dotnet test ContractIQ.slnx
 ```
 
+Run the backend API locally:
+
+```powershell
+dotnet run --project src/ContractIQ.Api
+```
+
+The API listens on `http://localhost:5186` by default. Use the executable request collection at `src/ContractIQ.Api/ContractIQ.Api.http` or see the [contract operation API guide](api/contract-operations.md) for the seeded demonstration flow.
+
 ```powershell
 Set-Location src/ContractIQ.Web
 npm run dev
