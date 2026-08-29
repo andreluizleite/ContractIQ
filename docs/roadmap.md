@@ -12,7 +12,7 @@ Model customers, contracts, termination terms, cancellation assessments, request
 
 ## M2 - Demonstrable Web Experience
 
-Deliver a small bilingual React interface for exploring customers, contracts, assessments, and cancellation requests.
+Deliver a product-focused bilingual React workspace for exploring customers, contracts, assessments, grounded answers, and safe cancellation requests.
 
 ## M3 - Local Knowledge Retrieval
 
@@ -28,7 +28,7 @@ Add configurable Microsoft Entra ID authentication and optional Microsoft Foundr
 
 ## M6 - Portfolio Release
 
-OpenTelemetry and the optional local dashboard are implemented. Complete AI evaluations, security review, demonstration material, and the first tagged release.
+OpenTelemetry and the optional local dashboard are implemented. Refine the product experience, then complete AI evaluations, security review, demonstration material, and the first tagged release.
 
 ## Definition of Ready
 

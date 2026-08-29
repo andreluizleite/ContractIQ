@@ -6,7 +6,7 @@ The application answers contract questions using structured business data, deter
 
 ## Project status
 
-The foundation, bilingual React experience, deterministic cancellation vertical slice, PostgreSQL persistence, local hybrid retrieval, grounded bilingual assistant, safe cancellation tool calling, and end-to-end OpenTelemetry are implemented with automated tests. Delivery is tracked through GitHub Issues, milestones, short-lived branches, and linked pull requests.
+The foundation, product-focused bilingual React workspace, deterministic cancellation vertical slice, PostgreSQL persistence, local hybrid retrieval, grounded bilingual assistant, safe cancellation tool calling, and end-to-end OpenTelemetry are implemented with automated tests. Delivery is tracked through GitHub Issues, milestones, short-lived branches, and linked pull requests.
 
 ## Planned technology
 
@@ -55,6 +55,8 @@ npm run dev
 ```
 
 Open the URL printed by Vite, normally `http://localhost:5173`. The interface supports English and Brazilian Portuguese and proxies its local API requests to the .NET process.
+
+The product workspace provides an operational overview, searchable customer navigation, contract and cancellation context, suggested assistant questions, cited answers, and an explicit confirmation step before any AI-prepared write action is executed.
 
 The API applies committed migrations and idempotent fictional seed data during startup. The database port is bound to the local machine only. The committed credentials are fictional and intended exclusively for local development.
 

@@ -70,10 +70,9 @@ function createApiMock() {
         .includes('create')
 
       return response({
-        answer:
-          proposesAction
-            ? 'I prepared the cancellation request. Review the preview before confirming [1].'
-            : 'ACME can request cancellation. The deterministic penalty applies [1].',
+        answer: proposesAction
+          ? 'I prepared the cancellation request. Review the preview before confirming [1].'
+          : 'ACME can request cancellation. The deterministic penalty applies [1].',
         language: 'en',
         hasSufficientEvidence: true,
         assessment,
@@ -175,6 +174,35 @@ describe('App', () => {
     expect(document.documentElement.lang).toBe('pt-BR')
   })
 
+  it('filters the customer workspace by company name', async () => {
+    const user = userEvent.setup()
+    const globex = {
+      id: '22222222-2222-4222-8222-222222222222',
+      name: 'Globex Corporation',
+    }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => response([customer, globex])),
+    )
+    render(<App />)
+
+    expect(
+      await screen.findByRole('button', { name: /ACME Corporation/ }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /Globex Corporation/ }),
+    ).toBeInTheDocument()
+
+    await user.type(screen.getByRole('searchbox'), 'globex')
+
+    expect(
+      screen.queryByRole('button', { name: /ACME Corporation/ }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /Globex Corporation/ }),
+    ).toBeInTheDocument()
+  })
+
   it('completes the customer, assessment, confirmation, and success flow', async () => {
     const user = userEvent.setup()
     const fetchMock = createApiMock()
@@ -255,7 +283,9 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: 'Ask assistant' }))
 
     expect(await screen.findByText('Grounded answer')).toBeInTheDocument()
-    expect(screen.getByText(/ACME can request cancellation/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/ACME can request cancellation/),
+    ).toBeInTheDocument()
     expect(screen.getByText('ACME Agreement')).toBeInTheDocument()
     expect(
       screen.getByText(/version 2.0 · Termination for convenience · page 2/),
@@ -267,6 +297,32 @@ describe('App', () => {
     expect(JSON.parse(String(assistantCall?.[1]?.body))).toEqual(
       expect.objectContaining({ language: 'en' }),
     )
+  })
+
+  it('uses a suggested question to start an assistant conversation', async () => {
+    const user = userEvent.setup()
+    const fetchMock = createApiMock()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<App />)
+
+    await user.click(
+      await screen.findByRole('button', { name: /ACME Corporation/ }),
+    )
+    await user.click(await screen.findByRole('button', { name: /AAAAAAAA/ }))
+    await screen.findByRole('heading', { name: 'Cancellation is available' })
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Can this contract be cancelled now?',
+      }),
+    )
+
+    expect(screen.getByLabelText('Contract question')).toHaveValue(
+      'Can this contract be cancelled now?',
+    )
+    await user.click(screen.getByRole('button', { name: 'Ask assistant' }))
+
+    expect(await screen.findByText('Grounded answer')).toBeInTheDocument()
   })
 
   it('prepares and confirms a cancellation through the assistant tool', async () => {
@@ -287,7 +343,9 @@ describe('App', () => {
     )
     await user.click(screen.getByRole('button', { name: 'Ask assistant' }))
 
-    expect(await screen.findByText('Action prepared by the agent')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Action prepared by the agent'),
+    ).toBeInTheDocument()
     expect(screen.getByText(/No state has changed/)).toBeInTheDocument()
     await user.click(
       screen.getByRole('button', { name: 'Review and confirm action' }),
