@@ -1,48 +1,24 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
-import {
-  ApiError,
-  contractIqApi,
-  type CancellationAssessment,
-  type CancellationRequest,
-  type ContractAnswer,
-  type ContractDetails,
-  type ContractSummary,
-  type CustomerSummary,
-  type Money,
-} from './api'
+import { ApiError, contractIqApi, type CancellationRequest } from './api'
+import { AssistantCopilot } from './components/AssistantCopilot'
+import { CancellationDialog } from './components/CancellationDialog'
+import { DecisionWorkspace } from './components/DecisionWorkspace'
+import { MobileWorkspaceHeader } from './components/MobileWorkspaceHeader'
+import { WorkspaceNavigator } from './components/WorkspaceNavigator'
+import { useContractAssistant } from './hooks/useContractAssistant'
+import { useContractWorkspace } from './hooks/useContractWorkspace'
 import { translations, type Language } from './translations'
 
-type Loadable<T> =
-  | { status: 'loading' }
-  | { status: 'error'; error: unknown }
-  | { status: 'ready'; data: T }
-
-type ContractWorkspace = {
-  details: ContractDetails
-  assessment: CancellationAssessment
-}
-
 type ConfirmationSource = 'manual' | 'assistant'
+type WorkspaceDrawer = 'navigator' | 'copilot'
 
-const initialLoad = { status: 'loading' } as const
-
-function formatDate(value: string, language: Language) {
-  return new Intl.DateTimeFormat(language, {
-    dateStyle: 'medium',
-    timeZone: 'UTC',
-  }).format(new Date(`${value}T00:00:00Z`))
-}
-
-function formatMoney(money: Money, language: Language) {
-  return new Intl.NumberFormat(language, {
-    style: 'currency',
-    currency: money.currency,
-  }).format(money.amount)
-}
-
-function shortId(id: string) {
-  return id.slice(0, 8).toUpperCase()
+function isCompactWorkspace() {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(max-width: 1240px)').matches
+  )
 }
 
 function errorMessage(error: unknown, language: Language) {
@@ -62,147 +38,125 @@ function errorMessage(error: unknown, language: Language) {
 export function App() {
   const [language, setLanguage] = useState<Language>('en')
   const [customerSearch, setCustomerSearch] = useState('')
-  const [customers, setCustomers] =
-    useState<Loadable<CustomerSummary[]>>(initialLoad)
-  const [customersReload, setCustomersReload] = useState(0)
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>()
-  const [contracts, setContracts] = useState<Loadable<
-    ContractSummary[]
-  > | null>(null)
-  const [contractsReload, setContractsReload] = useState(0)
-  const [selectedContractId, setSelectedContractId] = useState<string>()
-  const [workspace, setWorkspace] =
-    useState<Loadable<ContractWorkspace> | null>(null)
-  const [workspaceReload, setWorkspaceReload] = useState(0)
+  const [createdRequest, setCreatedRequest] = useState<CancellationRequest>()
   const [confirmationOpen, setConfirmationOpen] = useState(false)
   const [assessmentConfirmed, setAssessmentConfirmed] = useState(false)
   const [confirmationError, setConfirmationError] = useState<string>()
   const [submitting, setSubmitting] = useState(false)
-  const [createdRequest, setCreatedRequest] = useState<CancellationRequest>()
   const [idempotencyKey, setIdempotencyKey] = useState<string>()
   const [confirmationSource, setConfirmationSource] =
     useState<ConfirmationSource>('manual')
-  const [assistantQuestion, setAssistantQuestion] = useState('')
-  const [assistantAnswer, setAssistantAnswer] = useState<ContractAnswer>()
-  const [assistantError, setAssistantError] = useState<string>()
-  const [askingAssistant, setAskingAssistant] = useState(false)
+  const [compactWorkspace, setCompactWorkspace] = useState(isCompactWorkspace)
+  const [activeDrawer, setActiveDrawer] = useState<WorkspaceDrawer>()
+  const navigatorButtonRef = useRef<HTMLButtonElement>(null)
+  const copilotButtonRef = useRef<HTMLButtonElement>(null)
+  const navigatorCloseButtonRef = useRef<HTMLButtonElement>(null)
+  const copilotCloseButtonRef = useRef<HTMLButtonElement>(null)
+  const contractWorkspace = useContractWorkspace()
+  const assistant = useContractAssistant({
+    contractId: contractWorkspace.selectedContractId,
+    customerId: contractWorkspace.selectedCustomerId,
+    getErrorMessage: (error) => errorMessage(error, language),
+    language,
+  })
   const copy = translations[language]
 
-  const selectedCustomer = useMemo(
-    () =>
-      customers.status === 'ready'
-        ? customers.data.find((customer) => customer.id === selectedCustomerId)
-        : undefined,
-    [customers, selectedCustomerId],
-  )
-
-  const visibleCustomers = useMemo(() => {
-    if (customers.status !== 'ready') {
-      return []
-    }
-
-    const normalizedSearch = customerSearch.trim().toLocaleLowerCase(language)
-
-    return normalizedSearch.length === 0
-      ? customers.data
-      : customers.data.filter((customer) =>
-          customer.name.toLocaleLowerCase(language).includes(normalizedSearch),
-        )
-  }, [customerSearch, customers, language])
-
   useEffect(() => {
-    const controller = new AbortController()
-
-    contractIqApi
-      .listCustomers(controller.signal)
-      .then((data) => setCustomers({ status: 'ready', data }))
-      .catch((error: unknown) => {
-        if (!controller.signal.aborted) {
-          setCustomers({ status: 'error', error })
-        }
-      })
-
-    return () => controller.abort()
-  }, [customersReload])
-
-  useEffect(() => {
-    if (!selectedCustomerId) {
+    if (typeof window.matchMedia !== 'function') {
       return
     }
 
-    const controller = new AbortController()
+    const mediaQuery = window.matchMedia('(max-width: 1240px)')
 
-    contractIqApi
-      .listCustomerContracts(selectedCustomerId, controller.signal)
-      .then((data) => setContracts({ status: 'ready', data }))
-      .catch((error: unknown) => {
-        if (!controller.signal.aborted) {
-          setContracts({ status: 'error', error })
-        }
-      })
+    function onMediaChange(event: MediaQueryListEvent) {
+      setCompactWorkspace(event.matches)
+      if (!event.matches) {
+        setActiveDrawer(undefined)
+      }
+    }
 
-    return () => controller.abort()
-  }, [selectedCustomerId, contractsReload])
+    mediaQuery.addEventListener('change', onMediaChange)
+
+    return () => mediaQuery.removeEventListener('change', onMediaChange)
+  }, [])
 
   useEffect(() => {
-    if (!selectedContractId) {
+    if (!activeDrawer) {
       return
     }
 
-    const controller = new AbortController()
+    const trigger =
+      activeDrawer === 'navigator'
+        ? navigatorButtonRef.current
+        : copilotButtonRef.current
+    const closeButton =
+      activeDrawer === 'navigator'
+        ? navigatorCloseButtonRef.current
+        : copilotCloseButtonRef.current
+    const previousOverflow = document.body.style.overflow
+    const focusFrame = requestAnimationFrame(() => closeButton?.focus())
 
-    Promise.all([
-      contractIqApi.getContract(selectedContractId, controller.signal),
-      contractIqApi.assessCancellation(selectedContractId, controller.signal),
-    ])
-      .then(([details, assessment]) =>
-        setWorkspace({ status: 'ready', data: { details, assessment } }),
+    document.body.style.overflow = 'hidden'
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setActiveDrawer(undefined)
+        return
+      }
+
+      if (event.key !== 'Tab') {
+        return
+      }
+
+      const drawer = closeButton?.closest<HTMLElement>('aside')
+      if (!drawer) {
+        return
+      }
+
+      const focusable = Array.from(
+        drawer.querySelectorAll<HTMLElement>(
+          ':is(button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [href], [tabindex]:not([tabindex="-1"]))',
+        ),
       )
-      .catch((error: unknown) => {
-        if (!controller.signal.aborted) {
-          setWorkspace({ status: 'error', error })
-        }
-      })
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
 
-    return () => controller.abort()
-  }, [selectedContractId, workspaceReload])
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last?.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first?.focus()
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown)
+
+    return () => {
+      cancelAnimationFrame(focusFrame)
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = previousOverflow
+      trigger?.focus()
+    }
+  }, [activeDrawer])
 
   function changeLanguage(nextLanguage: Language) {
     setLanguage(nextLanguage)
-    setAssistantAnswer(undefined)
-    setAssistantError(undefined)
+    assistant.reset()
     document.documentElement.lang = nextLanguage
   }
 
   function selectCustomer(customerId: string) {
-    setSelectedCustomerId(customerId)
-    setContracts(initialLoad)
-    setSelectedContractId(undefined)
-    setWorkspace(null)
+    contractWorkspace.selectCustomer(customerId)
     setCreatedRequest(undefined)
-    resetAssistant()
+    assistant.reset()
   }
 
   function selectContract(contractId: string) {
-    setSelectedContractId(contractId)
-    setWorkspace(initialLoad)
+    contractWorkspace.selectContract(contractId)
     setCreatedRequest(undefined)
-    resetAssistant()
-  }
-
-  function retryCustomers() {
-    setCustomers(initialLoad)
-    setCustomersReload((value) => value + 1)
-  }
-
-  function retryContracts() {
-    setContracts(initialLoad)
-    setContractsReload((value) => value + 1)
-  }
-
-  function retryWorkspace() {
-    setWorkspace(initialLoad)
-    setWorkspaceReload((value) => value + 1)
+    assistant.reset()
   }
 
   function openConfirmation(source: ConfirmationSource = 'manual') {
@@ -225,7 +179,7 @@ export function App() {
       return
     }
 
-    if (!selectedContractId || !idempotencyKey) {
+    if (!contractWorkspace.selectedContractId || !idempotencyKey) {
       return
     }
 
@@ -235,23 +189,21 @@ export function App() {
     try {
       const request =
         confirmationSource === 'assistant' &&
-        selectedCustomerId &&
-        assistantAnswer?.proposedAction
+        contractWorkspace.selectedCustomerId &&
+        assistant.answer?.proposedAction
           ? await contractIqApi.confirmAssistantCancellation(
-              selectedCustomerId,
-              selectedContractId,
-              assistantAnswer.proposedAction.intent,
+              contractWorkspace.selectedCustomerId,
+              contractWorkspace.selectedContractId,
+              assistant.answer.proposedAction.intent,
               assessmentConfirmed,
               idempotencyKey,
             )
           : await contractIqApi.createCancellationRequest(
-              selectedContractId,
+              contractWorkspace.selectedContractId,
               idempotencyKey,
             )
       setCreatedRequest(request)
-      setAssistantAnswer((current) =>
-        current ? { ...current, proposedAction: null } : current,
-      )
+      assistant.clearProposedAction()
       setConfirmationOpen(false)
     } catch (error) {
       setConfirmationError(errorMessage(error, language))
@@ -260,767 +212,97 @@ export function App() {
     }
   }
 
-  function resetAssistant() {
-    setAssistantQuestion('')
-    setAssistantAnswer(undefined)
-    setAssistantError(undefined)
-  }
-
-  async function askAssistant() {
-    if (
-      !selectedCustomerId ||
-      !selectedContractId ||
-      assistantQuestion.trim().length < 3
-    ) {
-      return
-    }
-
-    setAskingAssistant(true)
-    setAssistantAnswer(undefined)
-    setAssistantError(undefined)
-
-    try {
-      const answer = await contractIqApi.askContractQuestion(
-        assistantQuestion.trim(),
-        selectedCustomerId,
-        selectedContractId,
-        language,
-      )
-      setAssistantAnswer(answer)
-    } catch (error) {
-      setAssistantError(
-        error instanceof ApiError && error.status === 503
-          ? copy.assistantUnavailable
-          : errorMessage(error, language),
-      )
-    } finally {
-      setAskingAssistant(false)
-    }
-  }
-
   return (
-    <div className="app-shell">
-      <header className="topbar">
-        <div className="topbar-inner">
-          <a className="brand" href="#overview" aria-label="ContractIQ home">
-            <span className="brand-mark" aria-hidden="true">
-              CQ
-            </span>
-            <span className="brand-copy">
-              <strong>ContractIQ</strong>
-              <small>Contract intelligence</small>
-            </span>
-          </a>
+    <div className="workspace-shell">
+      <WorkspaceNavigator
+        closeButtonRef={navigatorCloseButtonRef}
+        contracts={contractWorkspace.contracts}
+        customerSearch={customerSearch}
+        customers={contractWorkspace.customers}
+        getErrorMessage={(error) => errorMessage(error, language)}
+        isCompact={compactWorkspace}
+        isOpen={activeDrawer === 'navigator'}
+        language={language}
+        onCustomerSearchChange={setCustomerSearch}
+        onClose={() => setActiveDrawer(undefined)}
+        onLanguageChange={changeLanguage}
+        onRetryContracts={contractWorkspace.retryContracts}
+        onRetryCustomers={contractWorkspace.retryCustomers}
+        onSelectContract={selectContract}
+        onSelectCustomer={selectCustomer}
+        selectedContractId={contractWorkspace.selectedContractId}
+        selectedCustomer={contractWorkspace.selectedCustomer}
+        selectedCustomerId={contractWorkspace.selectedCustomerId}
+      />
 
-          <nav className="primary-navigation" aria-label={copy.navigationLabel}>
-            <a href="#overview">{copy.overviewNav}</a>
-            <a href="#contracts">{copy.workspaceNav}</a>
-            <a href="#assistant">{copy.assistantNav}</a>
-          </nav>
+      <MobileWorkspaceHeader
+        contractId={contractWorkspace.selectedContractId}
+        copilotButtonRef={copilotButtonRef}
+        customer={contractWorkspace.selectedCustomer}
+        language={language}
+        navigatorButtonRef={navigatorButtonRef}
+        onOpenCopilot={() => setActiveDrawer('copilot')}
+        onOpenNavigator={() => setActiveDrawer('navigator')}
+      />
 
-          <div className="topbar-actions">
-            <span className="environment-badge">
-              <span aria-hidden="true" />
-              {copy.localEnvironment}
-            </span>
-            <label className="language-picker">
-              <span>{copy.languageLabel}</span>
-              <select
-                aria-label={copy.languageLabel}
-                value={language}
-                onChange={(event) =>
-                  changeLanguage(event.target.value as Language)
-                }
-              >
-                <option value="en">EN</option>
-                <option value="pt-BR">PT-BR</option>
-              </select>
-            </label>
-          </div>
-        </div>
-      </header>
+      <DecisionWorkspace
+        createdRequest={createdRequest}
+        getErrorMessage={(error) => errorMessage(error, language)}
+        language={language}
+        onCreateRequest={() => openConfirmation('manual')}
+        onRetry={contractWorkspace.retryWorkspace}
+        selectedContractId={contractWorkspace.selectedContractId}
+        selectedCustomer={contractWorkspace.selectedCustomer}
+        workspace={contractWorkspace.workspace}
+      />
 
-      <main id="workspace">
-        <section
-          className="product-overview"
-          id="overview"
-          aria-labelledby="page-title"
-        >
-          <div className="page-intro">
-            <div className="release-badge">{copy.portfolioRelease}</div>
-            <p className="eyebrow">{copy.productEyebrow}</p>
-            <h1 id="page-title">{copy.title}</h1>
-            <p>{copy.description}</p>
-          </div>
+      <AssistantCopilot
+        answer={assistant.answer}
+        closeButtonRef={copilotCloseButtonRef}
+        contractId={contractWorkspace.selectedContractId}
+        customer={contractWorkspace.selectedCustomer}
+        error={assistant.error}
+        isCompact={compactWorkspace}
+        isLoading={assistant.isLoading}
+        isOpen={activeDrawer === 'copilot'}
+        language={language}
+        onAsk={assistant.ask}
+        onClose={() => setActiveDrawer(undefined)}
+        onQuestionChange={assistant.setQuestion}
+        onReviewAction={() => openConfirmation('assistant')}
+        question={assistant.question}
+        requestCreated={Boolean(createdRequest)}
+        submittedQuestion={assistant.submittedQuestion}
+      />
 
-          <div className="overview-heading">
-            <div>
-              <h2>{copy.overviewTitle}</h2>
-              <p>{copy.overviewDescription}</p>
-            </div>
-            <span className="system-status">
-              <span aria-hidden="true" />
-              OpenTelemetry
-            </span>
-          </div>
-
-          <div className="overview-metrics">
-            <MetricCard
-              detail={copy.customerCount}
-              label={copy.customerMetric}
-              value={
-                customers.status === 'ready'
-                  ? String(customers.data.length).padStart(2, '0')
-                  : '—'
-              }
-            />
-            <MetricCard
-              detail={selectedCustomer?.name ?? copy.selectContextMetric}
-              label={copy.contractMetric}
-              value={
-                contracts?.status === 'ready'
-                  ? String(contracts.data.length).padStart(2, '0')
-                  : '—'
-              }
-            />
-            <MetricCard
-              accent
-              detail={copy.intelligenceMetricDetail}
-              label={copy.intelligenceMetric}
-              value={copy.intelligenceMetricValue}
-            />
-          </div>
-        </section>
-
-        <section
-          className="operations-layout"
-          id="contracts"
-          aria-label={copy.productEyebrow}
-        >
-          <aside className="customer-panel">
-            <div className="panel-heading">
-              <div className="panel-title">
-                <p className="step-number">01</p>
-                <div>
-                  <h2>{copy.customers}</h2>
-                  <p>{copy.customersDescription}</p>
-                </div>
-              </div>
-              {customers.status === 'ready' && (
-                <span className="panel-count">{customers.data.length}</span>
-              )}
-            </div>
-
-            {customers.status === 'ready' && customers.data.length > 0 && (
-              <label className="customer-search">
-                <span className="visually-hidden">{copy.searchCustomers}</span>
-                <span className="search-icon" aria-hidden="true">
-                  ⌕
-                </span>
-                <input
-                  onChange={(event) => setCustomerSearch(event.target.value)}
-                  placeholder={copy.searchCustomersPlaceholder}
-                  type="search"
-                  value={customerSearch}
-                />
-              </label>
-            )}
-
-            {customers.status === 'loading' && (
-              <div
-                className="loading-list"
-                role="status"
-                aria-label={copy.loadingCustomers}
-              >
-                <span />
-                <span />
-                <span />
-              </div>
-            )}
-
-            {customers.status === 'error' && (
-              <ErrorState
-                message={errorMessage(customers.error, language)}
-                retryLabel={copy.retry}
-                onRetry={retryCustomers}
-              />
-            )}
-
-            {customers.status === 'ready' && customers.data.length === 0 && (
-              <p className="state-message">{copy.noCustomers}</p>
-            )}
-
-            {customers.status === 'ready' &&
-              customers.data.length > 0 &&
-              visibleCustomers.length === 0 && (
-                <p className="state-message">{copy.noCustomerSearchResults}</p>
-              )}
-
-            {customers.status === 'ready' && visibleCustomers.length > 0 && (
-              <div className="customer-list">
-                {visibleCustomers.map((customer) => (
-                  <button
-                    className="customer-button"
-                    data-selected={customer.id === selectedCustomerId}
-                    key={customer.id}
-                    onClick={() => selectCustomer(customer.id)}
-                    type="button"
-                  >
-                    <span className="customer-avatar" aria-hidden="true">
-                      {customer.name.slice(0, 2).toUpperCase()}
-                    </span>
-                    <span>
-                      <strong>{customer.name}</strong>
-                      <small>{shortId(customer.id)}</small>
-                    </span>
-                    <span className="chevron" aria-hidden="true">
-                      →
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </aside>
-
-          <div className="contract-panel">
-            {!selectedCustomer && (
-              <EmptyState
-                title={copy.chooseCustomer}
-                description={copy.chooseCustomerDescription}
-              />
-            )}
-
-            {selectedCustomer && (
-              <>
-                <div className="contract-panel-header">
-                  <div className="contract-context">
-                    <span className="customer-avatar" aria-hidden="true">
-                      {selectedCustomer.name.slice(0, 2).toUpperCase()}
-                    </span>
-                    <div>
-                      <p className="step-number">02 · {copy.workspaceNav}</p>
-                      <h2>{selectedCustomer.name}</h2>
-                    </div>
-                  </div>
-                  {contracts?.status === 'ready' && (
-                    <span className="context-count">
-                      {contracts.data.length} {copy.contracts.toLowerCase()}
-                    </span>
-                  )}
-                </div>
-
-                {contracts?.status === 'loading' && (
-                  <p className="state-message" role="status">
-                    {copy.loadingContracts}
-                  </p>
-                )}
-
-                {contracts?.status === 'error' && (
-                  <ErrorState
-                    message={errorMessage(contracts.error, language)}
-                    retryLabel={copy.retry}
-                    onRetry={retryContracts}
-                  />
-                )}
-
-                {contracts?.status === 'ready' &&
-                  contracts.data.length === 0 && (
-                    <EmptyState title={copy.noContracts} />
-                  )}
-
-                {contracts?.status === 'ready' && contracts.data.length > 0 && (
-                  <>
-                    <div className="contract-tabs" aria-label={copy.contracts}>
-                      {contracts.data.map((contract) => (
-                        <button
-                          type="button"
-                          key={contract.id}
-                          data-selected={contract.id === selectedContractId}
-                          onClick={() => selectContract(contract.id)}
-                        >
-                          <span className="contract-tab-copy">
-                            <strong>
-                              {copy.contract} {shortId(contract.id)}
-                            </strong>
-                            <small>
-                              {formatMoney(contract.monthlyFee, language)} ·{' '}
-                              {formatDate(contract.startDate, language)}
-                            </small>
-                          </span>
-                          <StatusBadge
-                            label={copy.statusLabels[contract.status]}
-                            status={contract.status}
-                          />
-                        </button>
-                      ))}
-                    </div>
-
-                    {!selectedContractId && (
-                      <EmptyState title={copy.chooseContract} compact />
-                    )}
-                  </>
-                )}
-
-                {workspace?.status === 'loading' && (
-                  <p className="state-message workspace-loading" role="status">
-                    {copy.loadingAssessment}
-                  </p>
-                )}
-
-                {workspace?.status === 'error' && (
-                  <ErrorState
-                    message={errorMessage(workspace.error, language)}
-                    retryLabel={copy.retry}
-                    onRetry={retryWorkspace}
-                  />
-                )}
-
-                {workspace?.status === 'ready' && (
-                  <>
-                    <ContractWorkspaceView
-                      assessment={workspace.data.assessment}
-                      contract={workspace.data.details}
-                      createdRequest={createdRequest}
-                      language={language}
-                      onCreateRequest={() => openConfirmation('manual')}
-                    />
-                    <AssistantPanel
-                      answer={assistantAnswer}
-                      error={assistantError}
-                      isLoading={askingAssistant}
-                      language={language}
-                      onAsk={askAssistant}
-                      onQuestionChange={setAssistantQuestion}
-                      onReviewAction={() => openConfirmation('assistant')}
-                      question={assistantQuestion}
-                      requestCreated={Boolean(createdRequest)}
-                    />
-                  </>
-                )}
-              </>
-            )}
-          </div>
-        </section>
-      </main>
-
-      <footer>
-        <span>ContractIQ</span>
-        <span>{copy.footerPrinciple}</span>
-      </footer>
-
-      {confirmationOpen && workspace?.status === 'ready' && (
-        <div className="dialog-backdrop" onMouseDown={closeConfirmation}>
-          <section
-            aria-labelledby="confirmation-title"
-            aria-modal="true"
-            className="confirmation-dialog"
-            onMouseDown={(event) => event.stopPropagation()}
-            role="dialog"
-          >
-            <p className="step-number">03</p>
-            <h2 id="confirmation-title">{copy.confirmationTitle}</h2>
-            <p>
-              {confirmationSource === 'assistant'
-                ? copy.agentConfirmationDescription
-                : copy.confirmationDescription}
-            </p>
-
-            <div className="confirmation-summary">
-              <span>{copy.earliestTermination}</span>
-              <strong>
-                {formatDate(
-                  workspace.data.assessment.earliestTerminationDate,
-                  language,
-                )}
-              </strong>
-              <span>{copy.estimatedPenalty}</span>
-              <strong>
-                {formatMoney(workspace.data.assessment.penalty, language)}
-              </strong>
-            </div>
-
-            <label className="confirmation-check">
-              <input
-                checked={assessmentConfirmed}
-                onChange={(event) => {
-                  setAssessmentConfirmed(event.target.checked)
-                  setConfirmationError(undefined)
-                }}
-                type="checkbox"
-              />
-              <span>{copy.confirmationCheck}</span>
-            </label>
-
-            {confirmationError && (
-              <p className="inline-error" role="alert">
-                {confirmationError}
-              </p>
-            )}
-
-            <div className="dialog-actions">
-              <button
-                className="secondary-button"
-                disabled={submitting}
-                onClick={closeConfirmation}
-                type="button"
-              >
-                {copy.cancel}
-              </button>
-              <button
-                className="primary-button"
-                disabled={submitting}
-                onClick={confirmCancellation}
-                type="button"
-              >
-                {submitting ? copy.creating : copy.confirm}
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function AssistantPanel({
-  answer,
-  error,
-  isLoading,
-  language,
-  onAsk,
-  onQuestionChange,
-  onReviewAction,
-  question,
-  requestCreated,
-}: {
-  answer?: ContractAnswer
-  error?: string
-  isLoading: boolean
-  language: Language
-  onAsk: () => void
-  onQuestionChange: (value: string) => void
-  onReviewAction: () => void
-  question: string
-  requestCreated: boolean
-}) {
-  const copy = translations[language]
-
-  return (
-    <article className="assistant-card" id="assistant">
-      <div className="assistant-heading">
-        <div className="assistant-identity">
-          <span className="assistant-mark" aria-hidden="true">
-            ✦
-          </span>
-          <div>
-            <p className="step-number">03 · {copy.assistantStatus}</p>
-            <h3>{copy.assistantTitle}</h3>
-          </div>
-        </div>
-        <span>AI + RAG + TOOLS</span>
-      </div>
-      <p className="assistant-description">{copy.assistantDescription}</p>
-
-      <div className="suggested-questions">
-        <span>{copy.suggestedQuestions}</span>
-        <div>
-          {[
-            copy.cancellationQuestion,
-            copy.penaltyQuestion,
-            copy.createRequestQuestion,
-          ].map((suggestion) => (
-            <button
-              key={suggestion}
-              onClick={() => onQuestionChange(suggestion)}
-              type="button"
-            >
-              {suggestion}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <label className="assistant-question">
-        <span>{copy.assistantQuestionLabel}</span>
-        <textarea
-          maxLength={1000}
-          onChange={(event) => onQuestionChange(event.target.value)}
-          placeholder={copy.assistantPlaceholder}
-          rows={3}
-          value={question}
+      {activeDrawer && compactWorkspace && (
+        <button
+          aria-label={copy.closeOverlay}
+          className="drawer-backdrop"
+          onClick={() => setActiveDrawer(undefined)}
+          tabIndex={-1}
+          type="button"
         />
-      </label>
-
-      <button
-        className="primary-button"
-        disabled={isLoading || question.trim().length < 3}
-        onClick={onAsk}
-        type="button"
-      >
-        {isLoading ? copy.askingAssistant : copy.askAssistant}
-      </button>
-
-      {error && (
-        <p className="inline-error" role="alert">
-          {error}
-        </p>
       )}
 
-      {answer && (
-        <section
-          className="assistant-response"
-          data-grounded={answer.hasSufficientEvidence}
-          aria-live="polite"
-        >
-          <p className="assistant-response-label">
-            {answer.hasSufficientEvidence
-              ? copy.assistantAnswer
-              : copy.insufficientEvidence}
-          </p>
-          <p className="assistant-answer-text">{answer.answer}</p>
-
-          {answer.proposedAction && (
-            <div
-              className="assistant-action"
-              data-allowed={answer.proposedAction.canExecute}
-            >
-              <strong>{copy.actionPrepared}</strong>
-              <p>
-                {answer.proposedAction.canExecute
-                  ? copy.actionPreparedDescription
-                  : copy.actionNotAllowed}
-              </p>
-              <dl>
-                <Detail
-                  label={copy.earliestTermination}
-                  value={formatDate(
-                    answer.proposedAction.assessment.earliestTerminationDate,
-                    language,
-                  )}
-                />
-                <Detail
-                  label={copy.estimatedPenalty}
-                  value={formatMoney(
-                    answer.proposedAction.assessment.penalty,
-                    language,
-                  )}
-                />
-              </dl>
-              {answer.proposedAction.canExecute && !requestCreated && (
-                <button
-                  className="primary-button"
-                  onClick={onReviewAction}
-                  type="button"
-                >
-                  {copy.reviewAgentAction}
-                </button>
-              )}
-            </div>
-          )}
-
-          {answer.citations.length > 0 && (
-            <div className="citation-list">
-              <strong>{copy.assistantSources}</strong>
-              <ol>
-                {answer.citations.map((citation) => (
-                  <li key={`${citation.number}-${citation.documentKey}`}>
-                    <span>[{citation.number}]</span>
-                    <div>
-                      <strong>{citation.title}</strong>
-                      <small>
-                        {copy.version} {citation.version} · {citation.section} ·{' '}
-                        {copy.page} {citation.page}
-                      </small>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
-        </section>
+      {confirmationOpen && contractWorkspace.workspace?.status === 'ready' && (
+        <CancellationDialog
+          assessment={contractWorkspace.workspace.data.assessment}
+          confirmed={assessmentConfirmed}
+          contractId={contractWorkspace.selectedContractId!}
+          customerName={contractWorkspace.selectedCustomer?.name ?? ''}
+          error={confirmationError}
+          language={language}
+          onClose={closeConfirmation}
+          onConfirm={confirmCancellation}
+          onConfirmedChange={(confirmed) => {
+            setAssessmentConfirmed(confirmed)
+            setConfirmationError(undefined)
+          }}
+          source={confirmationSource}
+          submitting={submitting}
+        />
       )}
-    </article>
-  )
-}
-
-function ContractWorkspaceView({
-  assessment,
-  contract,
-  createdRequest,
-  language,
-  onCreateRequest,
-}: {
-  assessment: CancellationAssessment
-  contract: ContractDetails
-  createdRequest?: CancellationRequest
-  language: Language
-  onCreateRequest: () => void
-}) {
-  const copy = translations[language]
-
-  return (
-    <div className="workspace-grid">
-      <article className="detail-card">
-        <div className="card-heading">
-          <h3>{copy.contractDetails}</h3>
-          <StatusBadge
-            label={copy.statusLabels[contract.status]}
-            status={contract.status}
-          />
-        </div>
-        <dl className="detail-list">
-          <Detail
-            label={copy.monthlyFee}
-            value={formatMoney(contract.monthlyFee, language)}
-          />
-          <Detail
-            label={copy.startDate}
-            value={formatDate(contract.startDate, language)}
-          />
-          <Detail
-            label={copy.commitmentEnd}
-            value={formatDate(contract.minimumCommitmentEndDate, language)}
-          />
-          <Detail
-            label={copy.noticePeriod}
-            value={`${contract.noticePeriodDays} ${copy.days}`}
-          />
-          <Detail
-            label={copy.earlyTerminationRate}
-            value={new Intl.NumberFormat(language, { style: 'percent' }).format(
-              contract.earlyTerminationPenaltyRate,
-            )}
-          />
-        </dl>
-      </article>
-
-      <article className="assessment-card" data-allowed={assessment.isAllowed}>
-        <p className="assessment-label">{copy.assessment}</p>
-        <h3>{assessment.isAllowed ? copy.eligible : copy.notEligible}</h3>
-        <p>{copy.reasonLabels[assessment.reason]}</p>
-
-        <dl className="assessment-values">
-          <Detail
-            label={copy.earliestTermination}
-            value={formatDate(assessment.earliestTerminationDate, language)}
-          />
-          <Detail
-            label={copy.remainingPeriods}
-            value={String(assessment.chargeableMonthlyPeriods)}
-          />
-          <Detail
-            label={copy.estimatedPenalty}
-            value={
-              assessment.hasPenalty
-                ? formatMoney(assessment.penalty, language)
-                : copy.noPenalty
-            }
-          />
-        </dl>
-
-        {assessment.isAllowed && !createdRequest && (
-          <button
-            className="primary-button full-width"
-            onClick={onCreateRequest}
-            type="button"
-          >
-            {copy.createRequest}
-          </button>
-        )}
-
-        {createdRequest && (
-          <div className="success-message" role="status">
-            <span className="success-icon" aria-hidden="true">
-              ✓
-            </span>
-            <div>
-              <strong>{copy.successTitle}</strong>
-              <p>{copy.successDescription}</p>
-              <dl>
-                <Detail
-                  label={copy.requestId}
-                  value={shortId(createdRequest.id)}
-                />
-                <Detail label={copy.status} value={copy.pendingReview} />
-              </dl>
-            </div>
-          </div>
-        )}
-      </article>
-    </div>
-  )
-}
-
-function MetricCard({
-  accent = false,
-  detail,
-  label,
-  value,
-}: {
-  accent?: boolean
-  detail: string
-  label: string
-  value: string
-}) {
-  return (
-    <article className="metric-card" data-accent={accent}>
-      <span>{label}</span>
-      <strong>{value}</strong>
-      <small>{detail}</small>
-    </article>
-  )
-}
-
-function Detail({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt>{label}</dt>
-      <dd>{value}</dd>
-    </div>
-  )
-}
-
-function StatusBadge({ label, status }: { label: string; status: string }) {
-  return (
-    <span className="status-badge" data-status={status}>
-      {label}
-    </span>
-  )
-}
-
-function EmptyState({
-  title,
-  description,
-  compact = false,
-}: {
-  title: string
-  description?: string
-  compact?: boolean
-}) {
-  return (
-    <div className="empty-state" data-compact={compact}>
-      <span aria-hidden="true">⌁</span>
-      <h3>{title}</h3>
-      {description && <p>{description}</p>}
-    </div>
-  )
-}
-
-function ErrorState({
-  message,
-  retryLabel,
-  onRetry,
-}: {
-  message: string
-  retryLabel: string
-  onRetry: () => void
-}) {
-  return (
-    <div className="error-state" role="alert">
-      <strong>{message}</strong>
-      <button className="text-button" onClick={onRetry} type="button">
-        {retryLabel}
-      </button>
     </div>
   )
 }
