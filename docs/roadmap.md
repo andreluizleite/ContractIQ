@@ -28,7 +28,7 @@ Add configurable Microsoft Entra ID authentication and optional Microsoft Foundr
 
 ## M6 - Portfolio Release
 
-OpenTelemetry and the optional local dashboard are implemented. Complete the structural product redesign, AI evaluations, security review, demonstration material, and the first tagged release.
+OpenTelemetry, the optional local dashboard, the structural product redesign, and local-first AI evaluations are implemented. Complete the security review, demonstration material, and the first tagged release.
 
 ## Definition of Ready
 
