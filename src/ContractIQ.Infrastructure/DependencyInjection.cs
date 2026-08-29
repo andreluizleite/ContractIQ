@@ -43,8 +43,10 @@ public static class DependencyInjection
                 "embeddinggemma",
                 768),
             new AssistantOptions(
+                AssistantProvider.Ollama,
                 new Uri("http://localhost:11434"),
                 "qwen3:4b",
+                null,
                 600,
                 0.1f));
     }
@@ -58,8 +60,10 @@ public static class DependencyInjection
             connectionString,
             knowledgeOptions,
             new AssistantOptions(
+                AssistantProvider.Ollama,
                 new Uri("http://localhost:11434"),
                 "qwen3:4b",
+                null,
                 600,
                 0.1f));
     }
@@ -97,7 +101,7 @@ public static class DependencyInjection
         services.AddSingleton(assistantOptions);
         services.AddSingleton<IAssistantToolAudit, LoggingAssistantToolAudit>();
         services.AddScoped<IAssistantWriteTransaction, EfAssistantWriteTransaction>();
-        services.AddScoped<IAssistantAnswerGenerator, OllamaAssistantAnswerGenerator>();
+        services.AddScoped<IAssistantAnswerGenerator, ChatClientAssistantAnswerGenerator>();
 
         return services;
     }

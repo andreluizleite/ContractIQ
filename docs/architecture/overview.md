@@ -41,7 +41,7 @@ Customer, contract, and effective-date filters are applied before ranking. Postg
 
 Assistant orchestration is an application concern rather than a separate service. The current read-only flow validates customer and contract scope, calculates the deterministic cancellation assessment, retrieves supporting evidence, refuses when no applicable contract clause is available, and asks a provider-neutral answer generator for a bilingual explanation.
 
-The local adapter uses `IChatClient` through Ollama. Citations are assembled by the application from retrieved metadata rather than invented by the model. `FunctionInvokingChatClient` exposes scoped read and preparation tools; the write tool remains outside automatic invocation and requires a separate confirmed HTTP request.
+The provider adapter uses Microsoft's `IChatClient` through either local Ollama or the OpenAI-compatible Kimi API. The committed default remains local and hosted usage is explicitly enabled with secret configuration. Citations are assembled by the application from retrieved metadata rather than invented by the model. `FunctionInvokingChatClient` exposes scoped read and preparation tools; the write tool remains outside automatic invocation and requires a separate confirmed HTTP request.
 
 ## Dependency rule
 

@@ -3,19 +3,83 @@ using Microsoft.Extensions.Configuration;
 
 namespace ContractIQ.Infrastructure.Assistant;
 
-public sealed record AssistantOptions(
-    Uri OllamaEndpoint,
-    string ChatModel,
-    int MaximumOutputTokens,
-    float Temperature)
+public enum AssistantProvider
 {
+    Ollama,
+    Kimi,
+}
+
+public sealed class AssistantOptions
+{
+    public AssistantOptions(
+        AssistantProvider provider,
+        Uri endpoint,
+        string chatModel,
+        string? apiKey,
+        int maximumOutputTokens,
+        float temperature)
+    {
+        Provider = provider;
+        Endpoint = endpoint;
+        ChatModel = chatModel;
+        ApiKey = apiKey;
+        MaximumOutputTokens = maximumOutputTokens;
+        Temperature = temperature;
+    }
+
+    public AssistantProvider Provider { get; }
+
+    public Uri Endpoint { get; }
+
+    public string ChatModel { get; }
+
+    // A class is used instead of a record so its generated string representation
+    // cannot accidentally include the hosted provider credential in logs.
+    public string? ApiKey { get; }
+
+    public int MaximumOutputTokens { get; }
+
+    public float Temperature { get; }
+
     public static AssistantOptions FromConfiguration(IConfiguration configuration)
     {
-        string endpoint = configuration["Assistant:Ollama:Endpoint"]
-            ?? configuration["Knowledge:Ollama:Endpoint"]
-            ?? "http://localhost:11434";
-        string model = configuration["Assistant:Ollama:ChatModel"]
-            ?? "qwen3:4b";
+        string providerValue = configuration["Assistant:Provider"] ?? "Ollama";
+
+        if (!Enum.TryParse(providerValue, ignoreCase: true, out AssistantProvider provider))
+        {
+            throw new InvalidOperationException(
+                $"Assistant provider '{providerValue}' is not supported. Use 'Ollama' or 'Kimi'.");
+        }
+
+        string endpoint;
+        string model;
+        string? apiKey = null;
+
+        if (provider == AssistantProvider.Kimi)
+        {
+            endpoint = configuration["Assistant:Kimi:Endpoint"]
+                ?? "https://api.moonshot.ai/v1";
+            model = configuration["Assistant:Kimi:ChatModel"]
+                ?? "kimi-k2.6";
+            apiKey = configuration["Assistant:Kimi:ApiKey"]
+                ?? configuration["MOONSHOT_API_KEY"];
+
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                throw new InvalidOperationException(
+                    "Kimi is selected as the assistant provider, but no API key is configured. " +
+                    "Set 'Assistant:Kimi:ApiKey' with .NET user secrets or set MOONSHOT_API_KEY.");
+            }
+        }
+        else
+        {
+            endpoint = configuration["Assistant:Ollama:Endpoint"]
+                ?? configuration["Knowledge:Ollama:Endpoint"]
+                ?? "http://localhost:11434";
+            model = configuration["Assistant:Ollama:ChatModel"]
+                ?? "qwen3:4b";
+        }
+
         int maximumOutputTokens = int.TryParse(
             configuration["Assistant:MaximumOutputTokens"],
             out int configuredTokens)
@@ -42,8 +106,10 @@ public sealed record AssistantOptions(
         }
 
         return new AssistantOptions(
+            provider,
             new Uri(endpoint, UriKind.Absolute),
             model,
+            apiKey,
             maximumOutputTokens,
             temperature);
     }
