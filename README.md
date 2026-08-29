@@ -33,6 +33,7 @@ Cancellation eligibility, dates, penalties, validation, authorization, idempoten
 - [Grounded contract assistant](docs/assistant/grounded-answers.md)
 - [Safe assistant tool calling](docs/assistant/safe-tool-calling.md)
 - [Local OpenTelemetry and dashboard](docs/observability/local-telemetry.md)
+- [Contract workspace UX specification](docs/ux/contract-workspace.md)
 - [Delivery roadmap](docs/roadmap.md)
 - [Contributing](CONTRIBUTING.md)
 - [Architecture Decision Records](docs/adr)
