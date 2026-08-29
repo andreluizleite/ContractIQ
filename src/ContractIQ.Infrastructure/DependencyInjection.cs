@@ -1,5 +1,6 @@
 using ContractIQ.Application.Abstractions.Persistence;
 using ContractIQ.Application.Assistant;
+using ContractIQ.Application.Assistant.Tools;
 using ContractIQ.Application.Knowledge;
 using ContractIQ.Infrastructure.Assistant;
 using ContractIQ.Infrastructure.Knowledge;
@@ -94,7 +95,9 @@ public static class DependencyInjection
         services.AddSingleton<IKnowledgeDocumentCatalog, FileSystemKnowledgeDocumentCatalog>();
         services.AddSingleton<IKnowledgeEmbeddingGenerator, OllamaKnowledgeEmbeddingGenerator>();
         services.AddSingleton(assistantOptions);
-        services.AddSingleton<IAssistantAnswerGenerator, OllamaAssistantAnswerGenerator>();
+        services.AddSingleton<IAssistantToolAudit, LoggingAssistantToolAudit>();
+        services.AddScoped<IAssistantWriteTransaction, EfAssistantWriteTransaction>();
+        services.AddScoped<IAssistantAnswerGenerator, OllamaAssistantAnswerGenerator>();
 
         return services;
     }

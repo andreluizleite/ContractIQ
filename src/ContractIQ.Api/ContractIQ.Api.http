@@ -88,3 +88,41 @@ Accept: application/json
 ### OpenAPI document, available in Development
 GET {{host}}/openapi/v1.json
 Accept: application/json
+
+### Ask the agent to prepare a cancellation request; no state changes
+POST {{host}}/api/v1/assistant/answers
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "Create the cancellation request.",
+  "customerId": "11111111-1111-4111-8111-111111111111",
+  "contractId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "language": "en"
+}
+
+### The write tool rejects a missing confirmation
+POST {{host}}/api/v1/assistant/actions/cancellation-requests
+Idempotency-Key: agent-demo-acme-001
+Content-Type: application/json
+Accept: application/json
+
+{
+  "customerId": "11111111-1111-4111-8111-111111111111",
+  "contractId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "intent": "create_cancellation_request",
+  "confirmed": false
+}
+
+### Execute the prepared write tool after explicit confirmation
+POST {{host}}/api/v1/assistant/actions/cancellation-requests
+Idempotency-Key: agent-demo-acme-001
+Content-Type: application/json
+Accept: application/json
+
+{
+  "customerId": "11111111-1111-4111-8111-111111111111",
+  "contractId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "intent": "create_cancellation_request",
+  "confirmed": true
+}

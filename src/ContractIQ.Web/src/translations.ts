@@ -56,7 +56,7 @@ const english = {
   conflict: 'A cancellation request is already open for this contract.',
   assistantTitle: 'Ask ContractIQ',
   assistantDescription:
-    'Get a grounded explanation from deterministic data and cited contract evidence.',
+    'Get a grounded explanation or ask the agent to prepare a safe business action.',
   assistantQuestionLabel: 'Contract question',
   assistantPlaceholder: 'Can this contract be cancelled now and what penalty applies?',
   askAssistant: 'Ask assistant',
@@ -66,6 +66,13 @@ const english = {
   insufficientEvidence: 'Insufficient contract evidence',
   assistantUnavailable:
     'The local AI models are unavailable. Confirm that Ollama, embeddinggemma, and qwen3:4b are installed.',
+  actionPrepared: 'Action prepared by the agent',
+  actionPreparedDescription:
+    'No state has changed. Review the deterministic preview before confirming the tool.',
+  actionNotAllowed: 'Domain rules do not allow this action.',
+  reviewAgentAction: 'Review and confirm action',
+  agentConfirmationDescription:
+    'The agent prepared this request, but only your explicit confirmation can execute the write tool.',
   page: 'page',
   version: 'version',
   footerPrinciple: 'AI assists. Domain rules decide.',
@@ -138,7 +145,7 @@ const portuguese: typeof english = {
     'Já existe uma solicitação de cancelamento aberta para este contrato.',
   assistantTitle: 'Pergunte ao ContractIQ',
   assistantDescription:
-    'Receba uma explicação fundamentada em dados determinísticos e evidências contratuais citadas.',
+    'Receba uma explicação fundamentada ou peça ao agente para preparar uma operação segura.',
   assistantQuestionLabel: 'Pergunta sobre o contrato',
   assistantPlaceholder: 'Este contrato pode ser cancelado agora e qual multa se aplica?',
   askAssistant: 'Perguntar ao assistente',
@@ -148,6 +155,13 @@ const portuguese: typeof english = {
   insufficientEvidence: 'Evidência contratual insuficiente',
   assistantUnavailable:
     'Os modelos locais de IA estão indisponíveis. Confirme que Ollama, embeddinggemma e qwen3:4b estão instalados.',
+  actionPrepared: 'Operação preparada pelo agente',
+  actionPreparedDescription:
+    'Nenhum estado foi alterado. Revise a prévia determinística antes de confirmar a ferramenta.',
+  actionNotAllowed: 'As regras de domínio não permitem esta operação.',
+  reviewAgentAction: 'Revisar e confirmar operação',
+  agentConfirmationDescription:
+    'O agente preparou esta solicitação, mas somente sua confirmação explícita pode executar a ferramenta de escrita.',
   page: 'página',
   version: 'versão',
   footerPrinciple: 'A IA auxilia. As regras de domínio decidem.',

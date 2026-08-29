@@ -1,4 +1,5 @@
 using ContractIQ.Application.Assistant;
+using ContractIQ.Application.Assistant.Tools;
 using ContractIQ.Application.Knowledge;
 using ContractIQ.Application.Knowledge.Search;
 using Xunit;
@@ -153,6 +154,7 @@ public sealed class AskContractQuestionHandlerTests
 
         public Task<GeneratedAssistantAnswer> GenerateAsync(
             AssistantPrompt prompt,
+            AssistantToolContext toolContext,
             CancellationToken cancellationToken = default)
         {
             CallCount++;

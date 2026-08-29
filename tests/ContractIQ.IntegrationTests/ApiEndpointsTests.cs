@@ -348,6 +348,7 @@ public sealed class ApiEndpointsTests(PostgreSqlFixture postgres) : IAsyncLifeti
             "/api/v1/contracts/{contractId}/cancellation-requests",
             "/api/v1/knowledge/search",
             "/api/v1/assistant/answers",
+            "/api/v1/assistant/actions/cancellation-requests",
         ];
 
         Assert.Equal(expectedPaths.Length, paths.EnumerateObject().Count());
@@ -370,6 +371,21 @@ public sealed class ApiEndpointsTests(PostgreSqlFixture postgres) : IAsyncLifeti
             idempotencyHeader.TryGetProperty("required", out JsonElement required) &&
             required.GetBoolean(),
             "OpenAPI must mark the Idempotency-Key header as required.");
+
+        JsonElement assistantToolPost = paths
+            .GetProperty("/api/v1/assistant/actions/cancellation-requests")
+            .GetProperty("post");
+        JsonElement assistantToolIdempotencyHeader = assistantToolPost
+            .GetProperty("parameters")
+            .EnumerateArray()
+            .Single(parameter =>
+                parameter.GetProperty("name").GetString() == "Idempotency-Key" &&
+                parameter.GetProperty("in").GetString() == "header");
+        Assert.True(
+            assistantToolIdempotencyHeader
+                .GetProperty("required")
+                .GetBoolean(),
+            "The assistant write tool must require the Idempotency-Key header.");
     }
 
     [Fact]
@@ -516,6 +532,102 @@ public sealed class ApiEndpointsTests(PostgreSqlFixture postgres) : IAsyncLifeti
     }
 
     [Fact]
+    public async Task Assistant_prepares_a_cancellation_action_without_changing_state()
+    {
+        await _databaseFactory!.IndexKnowledgeDocumentsAsync();
+        using var client = _databaseFactory.CreateClient();
+
+        using var response = await client.PostAsJsonAsync(
+            "/api/v1/assistant/answers",
+            new
+            {
+                Question = "Create the cancellation request.",
+                CustomerId = DemoDataIds.AcmeCustomer,
+                ContractId = DemoDataIds.AcmeActiveContract,
+                Language = "en",
+            },
+            CancellationToken.None);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument document = await ReadJsonAsync(response);
+        JsonElement proposal = document.RootElement.GetProperty("proposedAction");
+        Assert.Equal("create_cancellation_request", proposal.GetProperty("name").GetString());
+        Assert.True(proposal.GetProperty("requiresConfirmation").GetBoolean());
+        Assert.True(proposal.GetProperty("canExecute").GetBoolean());
+
+        await using var connection = new NpgsqlConnection(postgres.ConnectionString);
+        await connection.OpenAsync(CancellationToken.None);
+        Assert.Equal(0, await CountCancellationRequestsAsync(connection));
+    }
+
+    [Fact]
+    public async Task Assistant_write_tool_requires_explicit_confirmation()
+    {
+        using var client = _databaseFactory!.CreateClient();
+
+        using var response = await PostAssistantCancellationAsync(
+            client,
+            DemoDataIds.AcmeCustomer,
+            DemoDataIds.AcmeActiveContract,
+            confirmed: false,
+            "agent-request-001");
+
+        await AssertProblemDetailsAsync(
+            response,
+            HttpStatusCode.BadRequest,
+            "validation_error",
+            "Confirmed");
+    }
+
+    [Fact]
+    public async Task Assistant_write_tool_creates_and_idempotently_replays_the_request()
+    {
+        using var client = _databaseFactory!.CreateClient();
+
+        using var created = await PostAssistantCancellationAsync(
+            client,
+            DemoDataIds.AcmeCustomer,
+            DemoDataIds.AcmeActiveContract,
+            confirmed: true,
+            "agent-request-001");
+        using var replayed = await PostAssistantCancellationAsync(
+            client,
+            DemoDataIds.AcmeCustomer,
+            DemoDataIds.AcmeActiveContract,
+            confirmed: true,
+            "agent-request-001");
+
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, replayed.StatusCode);
+        using JsonDocument createdDocument = await ReadJsonAsync(created);
+        using JsonDocument replayedDocument = await ReadJsonAsync(replayed);
+        Assert.Equal(
+            createdDocument.RootElement.GetProperty("id").GetGuid(),
+            replayedDocument.RootElement.GetProperty("id").GetGuid());
+        Assert.Equal(
+            6_600m,
+            createdDocument.RootElement.GetProperty("penalty").GetProperty("amount").GetDecimal());
+    }
+
+    [Fact]
+    public async Task Assistant_write_tool_hides_a_contract_outside_customer_scope()
+    {
+        using var client = _databaseFactory!.CreateClient();
+
+        using var response = await PostAssistantCancellationAsync(
+            client,
+            DemoDataIds.GlobexCustomer,
+            DemoDataIds.AcmeActiveContract,
+            confirmed: true,
+            "agent-request-001");
+
+        await AssertProblemDetailsAsync(
+            response,
+            HttpStatusCode.NotFound,
+            "resource_not_found");
+    }
+
+    [Fact]
     public async Task PostgreSQL_seed_is_idempotent_and_pgvector_is_installed()
     {
         using (var scope = _databaseFactory!.Services.CreateScope())
@@ -574,6 +686,38 @@ public sealed class ApiEndpointsTests(PostgreSqlFixture postgres) : IAsyncLifeti
         }
 
         return await client.SendAsync(request, CancellationToken.None);
+    }
+
+    private static async Task<HttpResponseMessage> PostAssistantCancellationAsync(
+        HttpClient client,
+        Guid customerId,
+        Guid contractId,
+        bool confirmed,
+        string idempotencyKey)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            "/api/v1/assistant/actions/cancellation-requests")
+        {
+            Content = JsonContent.Create(new
+            {
+                CustomerId = customerId,
+                ContractId = contractId,
+                Intent = "create_cancellation_request",
+                Confirmed = confirmed,
+            }),
+        };
+        request.Headers.TryAddWithoutValidation("Idempotency-Key", idempotencyKey);
+
+        return await client.SendAsync(request, CancellationToken.None);
+    }
+
+    private static async Task<long> CountCancellationRequestsAsync(NpgsqlConnection connection)
+    {
+        await using var command = new NpgsqlCommand(
+            "SELECT COUNT(*) FROM cancellation_requests;",
+            connection);
+        return (long)(await command.ExecuteScalarAsync(CancellationToken.None))!;
     }
 
     private static async Task<JsonDocument> ReadJsonAsync(HttpResponseMessage response)

@@ -1,3 +1,4 @@
+using ContractIQ.Application.Assistant.Tools;
 using ContractIQ.Application.Contracts.AssessCancellation;
 
 namespace ContractIQ.Application.Assistant;
@@ -8,4 +9,5 @@ public sealed record ContractAnswer(
     bool HasSufficientEvidence,
     CancellationAssessmentDto Assessment,
     IReadOnlyList<AssistantCitation> Citations,
-    string? ModelId);
+    string? ModelId,
+    AssistantActionProposal? ProposedAction);

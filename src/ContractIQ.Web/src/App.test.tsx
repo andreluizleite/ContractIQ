@@ -64,13 +64,29 @@ function createApiMock() {
     }
 
     if (path === '/api/v1/assistant/answers' && init?.method === 'POST') {
+      const requestBody = JSON.parse(String(init.body)) as { question: string }
+      const proposesAction = requestBody.question
+        .toLowerCase()
+        .includes('create')
+
       return response({
         answer:
-          'ACME can request cancellation. The deterministic penalty applies [1].',
+          proposesAction
+            ? 'I prepared the cancellation request. Review the preview before confirming [1].'
+            : 'ACME can request cancellation. The deterministic penalty applies [1].',
         language: 'en',
         hasSufficientEvidence: true,
         assessment,
         modelId: 'test-chat-model',
+        proposedAction: proposesAction
+          ? {
+              name: 'create_cancellation_request',
+              intent: 'create_cancellation_request',
+              requiresConfirmation: true,
+              canExecute: true,
+              assessment,
+            }
+          : null,
         citations: [
           {
             number: 1,
@@ -83,6 +99,25 @@ function createApiMock() {
           },
         ],
       })
+    }
+
+    if (
+      path === '/api/v1/assistant/actions/cancellation-requests' &&
+      init?.method === 'POST'
+    ) {
+      return response(
+        {
+          id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+          contractId: contract.id,
+          customerId: customer.id,
+          createdAtUtc: '2026-08-28T12:00:00Z',
+          requestedOn: assessment.requestedOn,
+          earliestTerminationDate: assessment.earliestTerminationDate,
+          penalty: assessment.penalty,
+          status: 'pendingReview',
+        },
+        201,
+      )
     }
 
     if (
@@ -231,6 +266,52 @@ describe('App', () => {
     )
     expect(JSON.parse(String(assistantCall?.[1]?.body))).toEqual(
       expect.objectContaining({ language: 'en' }),
+    )
+  })
+
+  it('prepares and confirms a cancellation through the assistant tool', async () => {
+    const user = userEvent.setup()
+    const fetchMock = createApiMock()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<App />)
+
+    await user.click(
+      await screen.findByRole('button', { name: /ACME Corporation/ }),
+    )
+    await user.click(await screen.findByRole('button', { name: /AAAAAAAA/ }))
+    await screen.findByRole('heading', { name: 'Cancellation is available' })
+
+    await user.type(
+      screen.getByLabelText('Contract question'),
+      'Create the cancellation request.',
+    )
+    await user.click(screen.getByRole('button', { name: 'Ask assistant' }))
+
+    expect(await screen.findByText('Action prepared by the agent')).toBeInTheDocument()
+    expect(screen.getByText(/No state has changed/)).toBeInTheDocument()
+    await user.click(
+      screen.getByRole('button', { name: 'Review and confirm action' }),
+    )
+
+    expect(screen.getByRole('dialog')).toHaveTextContent(
+      'only your explicit confirmation can execute the write tool',
+    )
+    await user.click(screen.getByRole('checkbox'))
+    await user.click(screen.getByRole('button', { name: 'Confirm request' }))
+
+    expect(await screen.findByText('Request created')).toBeInTheDocument()
+    const writeToolCall = fetchMock.mock.calls.find(
+      ([path]) =>
+        String(path) === '/api/v1/assistant/actions/cancellation-requests',
+    )
+    expect(writeToolCall?.[1]?.headers).toEqual(
+      expect.objectContaining({ 'Idempotency-Key': expect.any(String) }),
+    )
+    expect(JSON.parse(String(writeToolCall?.[1]?.body))).toEqual(
+      expect.objectContaining({
+        confirmed: true,
+        intent: 'create_cancellation_request',
+      }),
     )
   })
 
