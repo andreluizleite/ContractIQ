@@ -41,6 +41,11 @@ function-calling flow used by the local adapter. You need a Kimi Open Platform A
 key with API credits. Do not commit the key, place it in React, or paste it into an
 issue or pull request.
 
+The Kimi adapter omits the generic `Temperature` setting because K2.6 accepts only
+provider-defined fixed values. It also explicitly disables K2.6 thinking so the
+provider-specific `reasoning_content` field is not required across the assistant's
+multi-step tool calls. These settings do not change deterministic domain decisions.
+
 Store the provider selection and key in .NET user secrets on your own machine:
 
 ```powershell

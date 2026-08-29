@@ -6,6 +6,7 @@ using Microsoft.Extensions.AI;
 using OllamaSharp;
 using OllamaSharp.Models.Exceptions;
 using OpenAI;
+using OpenAIChatCompletionOptions = OpenAI.Chat.ChatCompletionOptions;
 
 namespace ContractIQ.Infrastructure.Assistant;
 
@@ -74,25 +75,36 @@ internal sealed class ChatClientAssistantAnswerGenerator : IAssistantAnswerGener
 
         try
         {
+            var chatOptions = new ChatOptions
+            {
+                ModelId = _options.ChatModel,
+                MaxOutputTokens = _options.MaximumOutputTokens,
+                // Kimi models have provider-defined fixed temperatures and reject
+                // the 0.1 value used by the local deterministic demo profile.
+                Temperature = _options.Provider == AssistantProvider.Ollama
+                    ? _options.Temperature
+                    : null,
+                AllowMultipleToolCalls = false,
+                Tools =
+                [
+                    getContract,
+                    assessCancellation,
+                    searchEvidence,
+                    prepareCancellation,
+                ],
+            };
+
+            if (_options.Provider == AssistantProvider.Kimi)
+            {
+                chatOptions.RawRepresentationFactory = _ => CreateKimiChatOptions();
+            }
+
             ChatResponse response = await _chatClient.GetResponseAsync(
                 [
                     new ChatMessage(ChatRole.System, prompt.SystemPrompt),
                     new ChatMessage(ChatRole.User, prompt.UserPrompt),
                 ],
-                new ChatOptions
-                {
-                    ModelId = _options.ChatModel,
-                    MaxOutputTokens = _options.MaximumOutputTokens,
-                    Temperature = _options.Temperature,
-                    AllowMultipleToolCalls = false,
-                    Tools =
-                    [
-                        getContract,
-                        assessCancellation,
-                        searchEvidence,
-                        prepareCancellation,
-                    ],
-                },
+                chatOptions,
                 cancellationToken);
 
             return new GeneratedAssistantAnswer(
@@ -132,6 +144,17 @@ internal sealed class ChatClientAssistantAnswerGenerator : IAssistantAnswerGener
 
         return new OllamaApiClient(options.Endpoint, options.ChatModel);
     }
+
+#pragma warning disable SCME0001 // Patch is required for Kimi's provider-specific request field.
+    private static OpenAIChatCompletionOptions CreateKimiChatOptions()
+    {
+        var options = new OpenAIChatCompletionOptions();
+        options.Patch.Set(
+            "$.thinking"u8,
+            BinaryData.FromString("""{"type":"disabled"}"""));
+        return options;
+    }
+#pragma warning restore SCME0001
 
     private ExternalDependencyUnavailableException CreateUnavailableException(
         Exception exception)
