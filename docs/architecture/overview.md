@@ -41,7 +41,7 @@ Customer, contract, and effective-date filters are applied before ranking. Postg
 
 Assistant orchestration is an application concern rather than a separate service. The current read-only flow validates customer and contract scope, calculates the deterministic cancellation assessment, retrieves supporting evidence, refuses when no applicable contract clause is available, and asks a provider-neutral answer generator for a bilingual explanation.
 
-The local adapter uses `IChatClient` through Ollama. Citations are assembled by the application from retrieved metadata rather than invented by the model. State-changing tool calling remains a separate delivery with an explicit confirmation boundary.
+The local adapter uses `IChatClient` through Ollama. Citations are assembled by the application from retrieved metadata rather than invented by the model. `FunctionInvokingChatClient` exposes scoped read and preparation tools; the write tool remains outside automatic invocation and requires a separate confirmed HTTP request.
 
 ## Dependency rule
 
@@ -57,7 +57,7 @@ Commands and queries use separate request and handler types, but share the same 
 
 ## AI safety boundary
 
-The model may choose a tool. It cannot authoritatively calculate a penalty, validate a cancellation, assign a status, authorize a user, or write directly to the database. State-changing tools require explicit confirmation and execute application commands that recalculate and validate all business rules.
+The model may choose a tool. It cannot authoritatively calculate a penalty, validate a cancellation, assign a status, authorize a user, or write directly to the database. State-changing tools require explicit confirmation and execute application commands that recalculate and validate all business rules. Tool audit events contain identifiers, tool name, outcome, timestamp, and state-changing classification, but never prompts or document content.
 
 Retrieved document content is untrusted data. Instructions inside a document cannot change system behavior or enable tools.
 

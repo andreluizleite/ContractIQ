@@ -1,4 +1,5 @@
 using ContractIQ.Application.Abstractions.Persistence;
+using ContractIQ.Application.Assistant.Tools;
 using ContractIQ.Application.Common.Exceptions;
 using ContractIQ.Application.Common.Models;
 using ContractIQ.Application.Contracts.AssessCancellation;
@@ -66,7 +67,8 @@ public sealed class AskContractQuestionHandler(
                 HasSufficientEvidence: false,
                 assessment,
                 Citations: [],
-                ModelId: null);
+                ModelId: null,
+                ProposedAction: null);
         }
 
         AssistantPrompt prompt = promptBuilder.Build(
@@ -76,6 +78,12 @@ public sealed class AskContractQuestionHandler(
             evidence);
         GeneratedAssistantAnswer generated = await answerGenerator.GenerateAsync(
             prompt,
+            new AssistantToolContext(
+                command.Question.Trim(),
+                command.CustomerId,
+                command.ContractId,
+                language.ToCode(),
+                domainAssessment.RequestedOn),
             cancellationToken);
 
         if (string.IsNullOrWhiteSpace(generated.Text))
@@ -102,7 +110,8 @@ public sealed class AskContractQuestionHandler(
             HasSufficientEvidence: true,
             assessment,
             citations,
-            generated.ModelId);
+            generated.ModelId,
+            generated.ProposedAction);
     }
 
     private static void Validate(AskContractQuestionCommand command)

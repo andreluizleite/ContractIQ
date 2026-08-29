@@ -754,6 +754,60 @@ main {
   white-space: pre-wrap;
 }
 
+.assistant-action {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 16px;
+  background: #f0f6f2;
+  border: 1px solid #c9dace;
+  border-radius: 9px;
+}
+
+.assistant-action[data-allowed='false'] {
+  background: #fff7e8;
+  border-color: #e8d0a7;
+}
+
+.assistant-action > strong {
+  color: #285b42;
+  font-size: 0.82rem;
+}
+
+.assistant-action > p {
+  color: #5a685f;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.assistant-action dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  background: #fff;
+  border: 1px solid #d9e2db;
+  border-radius: 7px;
+}
+
+.assistant-action dl > div {
+  padding: 10px 12px;
+}
+
+.assistant-action dt {
+  color: #748078;
+  font-size: 0.66rem;
+}
+
+.assistant-action dd {
+  margin-top: 3px;
+  color: #29372f;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.assistant-action .primary-button {
+  justify-self: start;
+}
+
 .citation-list {
   margin-top: 18px;
   padding-top: 16px;

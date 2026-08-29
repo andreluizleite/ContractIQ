@@ -51,4 +51,4 @@ The client supplies only the contract identifier and idempotency key. Dates, sta
 
 The endpoint calls a focused command or query handler. Application ports hide PostgreSQL and Entity Framework Core, while the domain owns cancellation calculations and invariants. Persistence can change without changing the domain rules or HTTP contract.
 
-This is also the boundary that a future AI tool will call: the model may choose the cancellation capability, but the same command handler remains the authority for validation and state changes.
+This is also the boundary used by the assistant write tool: the model may prepare the cancellation capability, but the same command handler remains the authority for validation and state changes.

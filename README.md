@@ -6,7 +6,7 @@ The application answers contract questions using structured business data, deter
 
 ## Project status
 
-The foundation, bilingual React experience, deterministic cancellation vertical slice, PostgreSQL persistence, local hybrid retrieval, and grounded bilingual contract assistant are implemented with automated tests. Delivery is tracked through GitHub Issues, milestones, short-lived branches, and linked pull requests.
+The foundation, bilingual React experience, deterministic cancellation vertical slice, PostgreSQL persistence, local hybrid retrieval, grounded bilingual assistant, and safe cancellation tool calling are implemented with automated tests. Delivery is tracked through GitHub Issues, milestones, short-lived branches, and linked pull requests.
 
 ## Planned technology
 
@@ -31,6 +31,7 @@ Cancellation eligibility, dates, penalties, validation, authorization, idempoten
 - [Contract operation API](docs/api/contract-operations.md)
 - [Local knowledge retrieval](docs/knowledge/local-retrieval.md)
 - [Grounded contract assistant](docs/assistant/grounded-answers.md)
+- [Safe assistant tool calling](docs/assistant/safe-tool-calling.md)
 - [Delivery roadmap](docs/roadmap.md)
 - [Contributing](CONTRIBUTING.md)
 - [Architecture Decision Records](docs/adr)

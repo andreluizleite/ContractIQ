@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using ContractIQ.Application.Assistant;
+using ContractIQ.Application.Assistant.Tools;
 using ContractIQ.Application.Cancellations.CreateCancellationRequest;
 using ContractIQ.Application.Contracts.AssessCancellation;
 using ContractIQ.Application.Contracts.GetContractDetails;
@@ -81,6 +82,20 @@ public static class ApiEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        api.MapPost(
+                "/assistant/actions/cancellation-requests",
+                ConfirmAssistantCancellationAsync)
+            .WithName("ConfirmAssistantCancellation")
+            .WithTags("Assistant")
+            .WithSummary("Executes a prepared cancellation tool after explicit confirmation.")
+            .WithDescription(
+                "Accepts identifiers and intent only. The command recalculates all business values before persistence.")
+            .Produces<CancellationRequestDto>(StatusCodes.Status201Created)
+            .Produces<CancellationRequestDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         return endpoints;
     }
@@ -179,6 +194,27 @@ public static class ApiEndpoints
         return Results.Ok(answer);
     }
 
+    private static async Task<IResult> ConfirmAssistantCancellationAsync(
+        ConfirmAssistantCancellationRequest request,
+        [Required]
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
+        ConfirmCancellationActionHandler handler,
+        CancellationToken cancellationToken)
+    {
+        CreateCancellationRequestResult result = await handler.HandleAsync(
+            new ConfirmCancellationActionCommand(
+                request.CustomerId,
+                request.ContractId,
+                request.Intent,
+                request.Confirmed,
+                idempotencyKey ?? string.Empty),
+            cancellationToken);
+
+        return result.IsReplay
+            ? Results.Ok(result.Request)
+            : Results.Json(result.Request, statusCode: StatusCodes.Status201Created);
+    }
+
     private sealed record SearchKnowledgeRequest(
         string Query,
         Guid CustomerId,
@@ -191,4 +227,10 @@ public static class ApiEndpoints
         Guid CustomerId,
         Guid ContractId,
         string Language);
+
+    private sealed record ConfirmAssistantCancellationRequest(
+        Guid CustomerId,
+        Guid ContractId,
+        string Intent,
+        bool Confirmed);
 }

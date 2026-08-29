@@ -117,4 +117,4 @@ These measures reduce prompt-injection risk but do not make model output authori
 
 The Application project depends on `IAssistantAnswerGenerator`. Infrastructure implements it with OllamaSharp behind Microsoft's `IChatClient` abstraction. This keeps the orchestration and tests independent from the provider and allows a later Microsoft Foundry adapter without moving domain authority into the model integration.
 
-This delivery is read-only. Safe tool calling and explicit write confirmation belong to the next issue.
+The same assistant can now prepare a cancellation action through safe tool calling. See [Safe assistant tool calling](safe-tool-calling.md) for the human-confirmation and write boundary.

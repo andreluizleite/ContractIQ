@@ -59,6 +59,14 @@ export type AssistantCitation = {
   sourcePath: string
 }
 
+export type AssistantActionProposal = {
+  name: 'create_cancellation_request'
+  intent: string
+  requiresConfirmation: boolean
+  canExecute: boolean
+  assessment: CancellationAssessment
+}
+
 export type ContractAnswer = {
   answer: string
   language: 'en' | 'pt-BR'
@@ -66,6 +74,7 @@ export type ContractAnswer = {
   assessment: CancellationAssessment
   citations: AssistantCitation[]
   modelId: string | null
+  proposedAction: AssistantActionProposal | null
 }
 
 type ProblemDetails = {
@@ -173,5 +182,25 @@ export const contractIqApi = {
       },
       body: JSON.stringify({ question, customerId, contractId, language }),
     })
+  },
+
+  confirmAssistantCancellation(
+    customerId: string,
+    contractId: string,
+    intent: string,
+    confirmed: boolean,
+    idempotencyKey: string,
+  ) {
+    return request<CancellationRequest>(
+      '/api/v1/assistant/actions/cancellation-requests',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey,
+        },
+        body: JSON.stringify({ customerId, contractId, intent, confirmed }),
+      },
+    )
   },
 }

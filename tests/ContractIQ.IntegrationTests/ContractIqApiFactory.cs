@@ -1,5 +1,8 @@
 using ContractIQ.Application.Abstractions.Persistence;
 using ContractIQ.Application.Assistant;
+using ContractIQ.Application.Assistant.Tools;
+using ContractIQ.Application.Common.Models;
+using ContractIQ.Application.Contracts.AssessCancellation;
 using ContractIQ.Application.Knowledge;
 using ContractIQ.Application.Knowledge.Indexing;
 using ContractIQ.Infrastructure;
@@ -134,6 +137,7 @@ internal sealed class ContractIqApiFactory(
     {
         public Task<GeneratedAssistantAnswer> GenerateAsync(
             AssistantPrompt prompt,
+            AssistantToolContext toolContext,
             CancellationToken cancellationToken = default)
         {
             string answer = prompt.UserPrompt.Contains(
@@ -142,9 +146,30 @@ internal sealed class ContractIqApiFactory(
                 ? "A ACME pode solicitar o cancelamento. A multa determinística está na avaliação [1]."
                 : "ACME can request cancellation. The deterministic penalty is shown in the assessment [1].";
 
+            AssistantActionProposal? proposal = toolContext.Question.Contains(
+                "create",
+                StringComparison.OrdinalIgnoreCase) ||
+                toolContext.Question.Contains("crie", StringComparison.OrdinalIgnoreCase)
+                ? new AssistantActionProposal(
+                    AssistantToolNames.CreateCancellation,
+                    AssistantToolNames.CreateCancellation,
+                    RequiresConfirmation: true,
+                    CanExecute: true,
+                    new CancellationAssessmentDto(
+                        toolContext.ContractId,
+                        IsAllowed: true,
+                        ContractIQ.Domain.Contracts.CancellationAssessmentReason.Allowed,
+                        new DateOnly(2026, 3, 1),
+                        new DateOnly(2026, 3, 31),
+                        22,
+                        new MoneyDto(6_600m, "USD"),
+                        HasPenalty: true))
+                : null;
+
             return Task.FromResult(new GeneratedAssistantAnswer(
                 answer,
-                "integration-test-chat"));
+                "integration-test-chat",
+                proposal));
         }
     }
 

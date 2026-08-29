@@ -23,6 +23,8 @@ type ContractWorkspace = {
   assessment: CancellationAssessment
 }
 
+type ConfirmationSource = 'manual' | 'assistant'
+
 const initialLoad = { status: 'loading' } as const
 
 function formatDate(value: string, language: Language) {
@@ -77,6 +79,8 @@ export function App() {
   const [submitting, setSubmitting] = useState(false)
   const [createdRequest, setCreatedRequest] = useState<CancellationRequest>()
   const [idempotencyKey, setIdempotencyKey] = useState<string>()
+  const [confirmationSource, setConfirmationSource] =
+    useState<ConfirmationSource>('manual')
   const [assistantQuestion, setAssistantQuestion] = useState('')
   const [assistantAnswer, setAssistantAnswer] = useState<ContractAnswer>()
   const [assistantError, setAssistantError] = useState<string>()
@@ -186,10 +190,11 @@ export function App() {
     setWorkspaceReload((value) => value + 1)
   }
 
-  function openConfirmation() {
+  function openConfirmation(source: ConfirmationSource = 'manual') {
     setAssessmentConfirmed(false)
     setConfirmationError(undefined)
     setIdempotencyKey(globalThis.crypto.randomUUID())
+    setConfirmationSource(source)
     setConfirmationOpen(true)
   }
 
@@ -213,11 +218,25 @@ export function App() {
     setConfirmationError(undefined)
 
     try {
-      const request = await contractIqApi.createCancellationRequest(
-        selectedContractId,
-        idempotencyKey,
-      )
+      const request =
+        confirmationSource === 'assistant' &&
+        selectedCustomerId &&
+        assistantAnswer?.proposedAction
+          ? await contractIqApi.confirmAssistantCancellation(
+              selectedCustomerId,
+              selectedContractId,
+              assistantAnswer.proposedAction.intent,
+              assessmentConfirmed,
+              idempotencyKey,
+            )
+          : await contractIqApi.createCancellationRequest(
+              selectedContractId,
+              idempotencyKey,
+            )
       setCreatedRequest(request)
+      setAssistantAnswer((current) =>
+        current ? { ...current, proposedAction: null } : current,
+      )
       setConfirmationOpen(false)
     } catch (error) {
       setConfirmationError(errorMessage(error, language))
@@ -429,7 +448,7 @@ export function App() {
                       contract={workspace.data.details}
                       createdRequest={createdRequest}
                       language={language}
-                      onCreateRequest={openConfirmation}
+                      onCreateRequest={() => openConfirmation('manual')}
                     />
                     <AssistantPanel
                       answer={assistantAnswer}
@@ -438,7 +457,9 @@ export function App() {
                       language={language}
                       onAsk={askAssistant}
                       onQuestionChange={setAssistantQuestion}
+                      onReviewAction={() => openConfirmation('assistant')}
                       question={assistantQuestion}
+                      requestCreated={Boolean(createdRequest)}
                     />
                   </>
                 )}
@@ -464,7 +485,11 @@ export function App() {
           >
             <p className="step-number">03</p>
             <h2 id="confirmation-title">{copy.confirmationTitle}</h2>
-            <p>{copy.confirmationDescription}</p>
+            <p>
+              {confirmationSource === 'assistant'
+                ? copy.agentConfirmationDescription
+                : copy.confirmationDescription}
+            </p>
 
             <div className="confirmation-summary">
               <span>{copy.earliestTermination}</span>
@@ -530,7 +555,9 @@ function AssistantPanel({
   language,
   onAsk,
   onQuestionChange,
+  onReviewAction,
   question,
+  requestCreated,
 }: {
   answer?: ContractAnswer
   error?: string
@@ -538,7 +565,9 @@ function AssistantPanel({
   language: Language
   onAsk: () => void
   onQuestionChange: (value: string) => void
+  onReviewAction: () => void
   question: string
+  requestCreated: boolean
 }) {
   const copy = translations[language]
 
@@ -549,7 +578,7 @@ function AssistantPanel({
           <p className="step-number">03</p>
           <h3>{copy.assistantTitle}</h3>
         </div>
-        <span>AI + RAG</span>
+        <span>AI + RAG + TOOLS</span>
       </div>
       <p className="assistant-description">{copy.assistantDescription}</p>
 
@@ -591,6 +620,45 @@ function AssistantPanel({
               : copy.insufficientEvidence}
           </p>
           <p className="assistant-answer-text">{answer.answer}</p>
+
+          {answer.proposedAction && (
+            <div
+              className="assistant-action"
+              data-allowed={answer.proposedAction.canExecute}
+            >
+              <strong>{copy.actionPrepared}</strong>
+              <p>
+                {answer.proposedAction.canExecute
+                  ? copy.actionPreparedDescription
+                  : copy.actionNotAllowed}
+              </p>
+              <dl>
+                <Detail
+                  label={copy.earliestTermination}
+                  value={formatDate(
+                    answer.proposedAction.assessment.earliestTerminationDate,
+                    language,
+                  )}
+                />
+                <Detail
+                  label={copy.estimatedPenalty}
+                  value={formatMoney(
+                    answer.proposedAction.assessment.penalty,
+                    language,
+                  )}
+                />
+              </dl>
+              {answer.proposedAction.canExecute && !requestCreated && (
+                <button
+                  className="primary-button"
+                  onClick={onReviewAction}
+                  type="button"
+                >
+                  {copy.reviewAgentAction}
+                </button>
+              )}
+            </div>
+          )}
 
           {answer.citations.length > 0 && (
             <div className="citation-list">
