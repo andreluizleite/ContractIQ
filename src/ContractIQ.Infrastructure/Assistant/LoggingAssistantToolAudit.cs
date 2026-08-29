@@ -1,4 +1,5 @@
 using ContractIQ.Application.Assistant.Tools;
+using ContractIQ.Application.Common.Observability;
 using Microsoft.Extensions.Logging;
 
 namespace ContractIQ.Infrastructure.Assistant;
@@ -10,12 +11,15 @@ internal sealed class LoggingAssistantToolAudit(
         AssistantToolAuditEvent auditEvent,
         CancellationToken cancellationToken = default)
     {
+        ContractIqTelemetry.RecordToolCall(
+            auditEvent.ToolName,
+            auditEvent.Outcome,
+            auditEvent.StateChanging);
+
         logger.LogInformation(
-            "Assistant tool outcome: EventId={EventId}, Tool={ToolName}, CustomerId={CustomerId}, ContractId={ContractId}, Outcome={Outcome}, StateChanging={StateChanging}, OccurredAtUtc={OccurredAtUtc}",
+            "Assistant tool outcome: EventId={EventId}, Tool={ToolName}, Outcome={Outcome}, StateChanging={StateChanging}, OccurredAtUtc={OccurredAtUtc}",
             auditEvent.EventId,
             auditEvent.ToolName,
-            auditEvent.CustomerId,
-            auditEvent.ContractId,
             auditEvent.Outcome,
             auditEvent.StateChanging,
             auditEvent.OccurredAtUtc);

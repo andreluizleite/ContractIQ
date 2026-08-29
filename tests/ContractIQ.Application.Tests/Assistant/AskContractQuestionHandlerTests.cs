@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using ContractIQ.Application.Assistant;
 using ContractIQ.Application.Assistant.Tools;
+using ContractIQ.Application.Common.Observability;
 using ContractIQ.Application.Knowledge;
 using ContractIQ.Application.Knowledge.Search;
 using Xunit;
@@ -85,6 +87,54 @@ public sealed class AskContractQuestionHandlerTests
         Assert.Empty(result.Citations);
         Assert.Null(result.ModelId);
         Assert.Equal(0, generator.CallCount);
+    }
+
+    [Fact]
+    public async Task HandleAsync_emits_a_correlated_activity_without_business_identifiers()
+    {
+        Activity? completedActivity = null;
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source =>
+                source.Name == ContractIqTelemetry.ActivitySourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
+                ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = activity =>
+            {
+                if (activity.OperationName == "contractiq.assistant.ask")
+                {
+                    completedActivity = activity;
+                }
+            },
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        var search = new FakeKnowledgeSearch(CreateContractEvidence(
+            "A deterministic penalty applies."));
+        var generator = new FakeAnswerGenerator(
+            "ACME can request cancellation and a deterministic penalty applies [1].");
+        AskContractQuestionHandler handler = CreateHandler(search, generator);
+
+        await handler.HandleAsync(new AskContractQuestionCommand(
+            "Can ACME cancel now?",
+            ApplicationTestData.AcmeCustomerId,
+            ApplicationTestData.AcmeContractId,
+            "en"));
+
+        Assert.NotNull(completedActivity);
+        Assert.Equal(ActivityStatusCode.Ok, completedActivity.Status);
+        Assert.Equal(
+            "en",
+            completedActivity.GetTagItem("contractiq.assistant.language"));
+        Assert.Equal(
+            1,
+            completedActivity.GetTagItem("contractiq.assistant.citation.count"));
+        Assert.DoesNotContain(
+            completedActivity.TagObjects,
+            tag => tag.Key.Contains("customer", StringComparison.OrdinalIgnoreCase) ||
+                tag.Key.Contains("contract_id", StringComparison.OrdinalIgnoreCase) ||
+                tag.Key.Contains("question", StringComparison.OrdinalIgnoreCase) ||
+                tag.Key.Contains("prompt", StringComparison.OrdinalIgnoreCase));
     }
 
     private static AskContractQuestionHandler CreateHandler(

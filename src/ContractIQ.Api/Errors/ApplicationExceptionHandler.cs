@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using ContractIQ.Api.Observability;
 using ContractIQ.Application.Common.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
@@ -32,7 +32,8 @@ public sealed class ApplicationExceptionHandler(
         };
 
         problem.Extensions["code"] = mapping.Code;
-        problem.Extensions["traceId"] = Activity.Current?.Id ?? httpContext.TraceIdentifier;
+        problem.Extensions["traceId"] =
+            RequestCorrelationMiddleware.ResolveCorrelationId(httpContext);
 
         if (mapping.Field is not null)
         {

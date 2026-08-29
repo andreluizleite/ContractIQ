@@ -1,7 +1,9 @@
 using System.ClientModel;
+using System.Diagnostics;
 using ContractIQ.Application.Assistant;
 using ContractIQ.Application.Assistant.Tools;
 using ContractIQ.Application.Common.Exceptions;
+using ContractIQ.Application.Common.Observability;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
 using OllamaSharp.Models.Exceptions;
@@ -40,6 +42,13 @@ internal sealed class ChatClientAssistantAnswerGenerator : IAssistantAnswerGener
         AssistantToolContext toolContext,
         CancellationToken cancellationToken = default)
     {
+        long startedAt = Stopwatch.GetTimestamp();
+        string provider = _options.Provider.ToString().ToLowerInvariant();
+        using Activity? activity = ContractIqTelemetry.StartActivity(
+            "contractiq.ai.model.generate");
+        activity?.SetTag("gen_ai.provider.name", provider);
+        activity?.SetTag("gen_ai.request.model", _options.ChatModel);
+
         AssistantActionProposal? proposedAction = null;
 
         async Task<AssistantActionProposal> PrepareCancellationAsync(
@@ -107,19 +116,43 @@ internal sealed class ChatClientAssistantAnswerGenerator : IAssistantAnswerGener
                 chatOptions,
                 cancellationToken);
 
+            activity?.SetTag("gen_ai.usage.input_tokens", response.Usage?.InputTokenCount);
+            activity?.SetTag("gen_ai.usage.output_tokens", response.Usage?.OutputTokenCount);
+            activity?.SetStatus(ActivityStatusCode.Ok);
+            ContractIqTelemetry.RecordModelRequest(
+                provider,
+                _options.ChatModel,
+                "succeeded",
+                Stopwatch.GetElapsedTime(startedAt),
+                response.Usage?.InputTokenCount,
+                response.Usage?.OutputTokenCount,
+                response.Usage?.TotalTokenCount);
+
             return new GeneratedAssistantAnswer(
                 response.Text,
                 _options.ChatModel,
                 proposedAction);
         }
+        catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
+        {
+            RecordFailure(activity, provider, "cancelled", exception, startedAt);
+            throw;
+        }
         catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {
+            RecordFailure(activity, provider, "unavailable", exception, startedAt);
             throw CreateUnavailableException(exception);
         }
         catch (Exception exception) when (
             exception is HttpRequestException or OllamaException or ClientResultException)
         {
+            RecordFailure(activity, provider, "unavailable", exception, startedAt);
             throw CreateUnavailableException(exception);
+        }
+        catch (Exception exception)
+        {
+            RecordFailure(activity, provider, "failed", exception, startedAt);
+            throw;
         }
     }
 
@@ -167,5 +200,20 @@ internal sealed class ChatClientAssistantAnswerGenerator : IAssistantAnswerGener
             : $"Ollama is unavailable or chat model '{_options.ChatModel}' is not installed.";
 
         return new ExternalDependencyUnavailableException(dependency, message, exception);
+    }
+
+    private void RecordFailure(
+        Activity? activity,
+        string provider,
+        string outcome,
+        Exception exception,
+        long startedAt)
+    {
+        ContractIqTelemetry.MarkError(activity, exception);
+        ContractIqTelemetry.RecordModelRequest(
+            provider,
+            _options.ChatModel,
+            outcome,
+            Stopwatch.GetElapsedTime(startedAt));
     }
 }

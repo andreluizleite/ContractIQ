@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using ContractIQ.Application.Abstractions.Persistence;
 using ContractIQ.Application.Assistant.Tools;
 using ContractIQ.Application.Common.Exceptions;
 using ContractIQ.Application.Common.Models;
+using ContractIQ.Application.Common.Observability;
 using ContractIQ.Application.Contracts.AssessCancellation;
 using ContractIQ.Application.Knowledge;
 using ContractIQ.Application.Knowledge.Search;
@@ -22,96 +24,140 @@ public sealed class AskContractQuestionHandler(
         AskContractQuestionCommand command,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(command);
-        Validate(command);
+        long startedAt = Stopwatch.GetTimestamp();
+        int evidenceCount = 0;
+        using Activity? activity = ContractIqTelemetry.StartActivity(
+            "contractiq.assistant.ask");
 
-        AssistantLanguageParser.TryParse(command.Language, out AssistantLanguage language);
-
-        var contract = await contracts.GetByIdAsync(command.ContractId, cancellationToken);
-
-        if (contract is null || contract.CustomerId != command.CustomerId)
+        try
         {
-            throw new ResourceNotFoundException("Contract", command.ContractId);
-        }
+            ArgumentNullException.ThrowIfNull(command);
+            Validate(command);
 
-        var domainAssessment = contract.AssessCancellation(timeProvider);
-        var assessment = new CancellationAssessmentDto(
-            contract.Id,
-            domainAssessment.IsAllowed,
-            domainAssessment.Reason,
-            domainAssessment.RequestedOn,
-            domainAssessment.EarliestTerminationDate,
-            domainAssessment.ChargeableMonthlyPeriods,
-            MoneyDto.FromDomain(domainAssessment.Penalty),
-            domainAssessment.HasPenalty);
+            AssistantLanguageParser.TryParse(command.Language, out AssistantLanguage language);
+            activity?.SetTag("contractiq.assistant.language", language.ToCode());
 
-        IReadOnlyList<KnowledgeEvidence> evidence = await knowledgeSearch.HandleAsync(
-            new SearchKnowledgeQuery(
-                command.Question,
-                command.CustomerId,
-                command.ContractId,
+            var contract = await contracts.GetByIdAsync(command.ContractId, cancellationToken);
+
+            if (contract is null || contract.CustomerId != command.CustomerId)
+            {
+                throw new ResourceNotFoundException("Contract", command.ContractId);
+            }
+
+            var domainAssessment = contract.AssessCancellation(timeProvider);
+            var assessment = new CancellationAssessmentDto(
+                contract.Id,
+                domainAssessment.IsAllowed,
+                domainAssessment.Reason,
                 domainAssessment.RequestedOn,
-                EvidenceLimit),
-            cancellationToken);
+                domainAssessment.EarliestTerminationDate,
+                domainAssessment.ChargeableMonthlyPeriods,
+                MoneyDto.FromDomain(domainAssessment.Penalty),
+                domainAssessment.HasPenalty);
 
-        bool hasApplicableContractEvidence = evidence.Any(item =>
-            item.DocumentType == KnowledgeDocumentType.Contract &&
-            item.CustomerId == command.CustomerId &&
-            item.ContractId == command.ContractId);
+            IReadOnlyList<KnowledgeEvidence> evidence = await knowledgeSearch.HandleAsync(
+                new SearchKnowledgeQuery(
+                    command.Question,
+                    command.CustomerId,
+                    command.ContractId,
+                    domainAssessment.RequestedOn,
+                    EvidenceLimit),
+                cancellationToken);
+            evidenceCount = evidence.Count;
 
-        if (!hasApplicableContractEvidence)
-        {
-            return new ContractAnswer(
-                InsufficientEvidenceMessage(language),
-                language.ToCode(),
-                HasSufficientEvidence: false,
-                assessment,
-                Citations: [],
-                ModelId: null,
-                ProposedAction: null);
-        }
+            bool hasApplicableContractEvidence = evidence.Any(item =>
+                item.DocumentType == KnowledgeDocumentType.Contract &&
+                item.CustomerId == command.CustomerId &&
+                item.ContractId == command.ContractId);
 
-        AssistantPrompt prompt = promptBuilder.Build(
-            command.Question.Trim(),
-            language,
-            assessment,
-            evidence);
-        GeneratedAssistantAnswer generated = await answerGenerator.GenerateAsync(
-            prompt,
-            new AssistantToolContext(
+            if (!hasApplicableContractEvidence)
+            {
+                activity?.SetTag("contractiq.assistant.evidence.sufficient", false);
+                activity?.SetTag("contractiq.assistant.evidence.count", evidenceCount);
+                activity?.SetTag("contractiq.assistant.citation.count", 0);
+                activity?.SetStatus(ActivityStatusCode.Ok);
+                ContractIqTelemetry.RecordAssistantRequest(
+                    "insufficient_evidence",
+                    Stopwatch.GetElapsedTime(startedAt),
+                    evidenceCount,
+                    citationCount: 0);
+
+                return new ContractAnswer(
+                    InsufficientEvidenceMessage(language),
+                    language.ToCode(),
+                    HasSufficientEvidence: false,
+                    assessment,
+                    Citations: [],
+                    ModelId: null,
+                    ProposedAction: null);
+            }
+
+            AssistantPrompt prompt = promptBuilder.Build(
                 command.Question.Trim(),
-                command.CustomerId,
-                command.ContractId,
+                language,
+                assessment,
+                evidence);
+            GeneratedAssistantAnswer generated = await answerGenerator.GenerateAsync(
+                prompt,
+                new AssistantToolContext(
+                    command.Question.Trim(),
+                    command.CustomerId,
+                    command.ContractId,
+                    language.ToCode(),
+                    domainAssessment.RequestedOn),
+                cancellationToken);
+
+            if (string.IsNullOrWhiteSpace(generated.Text))
+            {
+                throw new ExternalDependencyUnavailableException(
+                    "assistant_model",
+                    "The assistant model returned an empty response.");
+            }
+
+            AssistantCitation[] citations = evidence
+                .Select((item, index) => new AssistantCitation(
+                    index + 1,
+                    item.DocumentKey,
+                    item.Title,
+                    item.Version,
+                    item.Section,
+                    item.Page,
+                    item.SourcePath))
+                .ToArray();
+
+            activity?.SetTag("contractiq.assistant.evidence.sufficient", true);
+            activity?.SetTag("contractiq.assistant.evidence.count", evidenceCount);
+            activity?.SetTag("contractiq.assistant.citation.count", citations.Length);
+            activity?.SetStatus(ActivityStatusCode.Ok);
+            ContractIqTelemetry.RecordAssistantRequest(
+                "succeeded",
+                Stopwatch.GetElapsedTime(startedAt),
+                evidenceCount,
+                citations.Length);
+
+            return new ContractAnswer(
+                generated.Text.Trim(),
                 language.ToCode(),
-                domainAssessment.RequestedOn),
-            cancellationToken);
-
-        if (string.IsNullOrWhiteSpace(generated.Text))
-        {
-            throw new ExternalDependencyUnavailableException(
-                "assistant_model",
-                "The assistant model returned an empty response.");
+                HasSufficientEvidence: true,
+                assessment,
+                citations,
+                generated.ModelId,
+                generated.ProposedAction);
         }
+        catch (Exception exception)
+        {
+            string outcome = exception is OperationCanceledException
+                ? "cancelled"
+                : "failed";
 
-        AssistantCitation[] citations = evidence
-            .Select((item, index) => new AssistantCitation(
-                index + 1,
-                item.DocumentKey,
-                item.Title,
-                item.Version,
-                item.Section,
-                item.Page,
-                item.SourcePath))
-            .ToArray();
-
-        return new ContractAnswer(
-            generated.Text.Trim(),
-            language.ToCode(),
-            HasSufficientEvidence: true,
-            assessment,
-            citations,
-            generated.ModelId,
-            generated.ProposedAction);
+            ContractIqTelemetry.MarkError(activity, exception);
+            ContractIqTelemetry.RecordAssistantRequest(
+                outcome,
+                Stopwatch.GetElapsedTime(startedAt),
+                evidenceCount,
+                citationCount: 0);
+            throw;
+        }
     }
 
     private static void Validate(AskContractQuestionCommand command)

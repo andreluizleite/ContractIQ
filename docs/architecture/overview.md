@@ -21,6 +21,7 @@ flowchart TB
     Infrastructure --> LocalAI[Local AI provider]
     Infrastructure --> Foundry[Microsoft Foundry]
     Infrastructure --> AzureSearch[Azure AI Search]
+    Api -. traces, metrics, logs .-> Dashboard[Local Aspire Dashboard]
 ```
 
 ## Logical boundaries
@@ -57,7 +58,7 @@ Commands and queries use separate request and handler types, but share the same 
 
 ## AI safety boundary
 
-The model may choose a tool. It cannot authoritatively calculate a penalty, validate a cancellation, assign a status, authorize a user, or write directly to the database. State-changing tools require explicit confirmation and execute application commands that recalculate and validate all business rules. Tool audit events contain identifiers, tool name, outcome, timestamp, and state-changing classification, but never prompts or document content.
+The model may choose a tool. It cannot authoritatively calculate a penalty, validate a cancellation, assign a status, authorize a user, or write directly to the database. State-changing tools require explicit confirmation and execute application commands that recalculate and validate all business rules. Tool audit events contain identifiers inside the application boundary, plus tool name, outcome, timestamp, and state-changing classification. Exported logs omit the business identifiers as well as prompts and document content.
 
 Retrieved document content is untrusted data. Instructions inside a document cannot change system behavior or enable tools.
 
@@ -68,3 +69,16 @@ Retrieved document content is untrusted data. Instructions inside a document can
 - `Azure`: optional Microsoft Foundry and Azure AI Search adapters.
 
 The default developer experience remains functional without Azure.
+
+## Observability boundary
+
+The API composition root configures OpenTelemetry and its optional OTLP exporter.
+Application handlers use the native .NET `ActivitySource` and `Meter` APIs to name
+business operations without depending on a telemetry backend. The domain remains
+free of observability dependencies.
+
+ASP.NET Core, `HttpClient`, Npgsql, RAG orchestration, model calls, tools, and
+cancellation commands participate in the same W3C trace. Export is disabled by
+default and the local Aspire Dashboard runs only through an explicit Docker
+Compose profile. See [Local telemetry](../observability/local-telemetry.md) for
+metrics, correlation, and the data protection policy.

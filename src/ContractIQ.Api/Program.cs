@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using ContractIQ.Api.Endpoints;
 using ContractIQ.Api.Errors;
 using ContractIQ.Api.Health;
+using ContractIQ.Api.Observability;
 using ContractIQ.Application.Assistant;
 using ContractIQ.Application.Assistant.Tools;
 using ContractIQ.Application.Cancellations.CreateCancellationRequest;
@@ -17,7 +18,16 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddProblemDetails();
+builder.AddContractIqOpenTelemetry();
+
+builder.Services.AddProblemDetails(options =>
+{
+    options.CustomizeProblemDetails = context =>
+    {
+        context.ProblemDetails.Extensions["traceId"] =
+            RequestCorrelationMiddleware.ResolveCorrelationId(context.HttpContext);
+    };
+});
 builder.Services.AddExceptionHandler<ApplicationExceptionHandler>();
 builder.Services.AddHealthChecks();
 builder.Services.AddOpenApi();
@@ -44,6 +54,7 @@ var app = builder.Build();
 
 await app.Services.InitializeDatabaseAsync();
 
+app.UseMiddleware<RequestCorrelationMiddleware>();
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
