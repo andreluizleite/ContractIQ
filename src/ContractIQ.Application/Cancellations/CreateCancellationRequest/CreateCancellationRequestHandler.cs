@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using ContractIQ.Application.Abstractions.Persistence;
 using ContractIQ.Application.Common.Exceptions;
 using ContractIQ.Application.Common.Models;
+using ContractIQ.Application.Common.Observability;
 using ContractIQ.Domain.Cancellations;
 using CancellationAssessment = ContractIQ.Domain.Contracts.CancellationAssessment;
 using Contract = ContractIQ.Domain.Contracts.Contract;
@@ -16,48 +18,99 @@ public sealed class CreateCancellationRequestHandler(
         CreateCancellationRequestCommand command,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(command);
+        long startedAt = Stopwatch.GetTimestamp();
+        using Activity? activity = ContractIqTelemetry.StartActivity(
+            "contractiq.cancellation.create");
 
-        string idempotencyKey = ValidateIdempotencyKey(command.IdempotencyKey);
-        DateTimeOffset now = timeProvider.GetUtcNow();
-
-        var replay = await cancellationRequests.FindByIdempotencyKeyAsync(
-            idempotencyKey,
-            cancellationToken);
-
-        if (replay is not null)
+        try
         {
-            EnsureReplayMatchesContract(replay, command.ContractId);
-            return ToResult(replay, isReplay: true);
+            ArgumentNullException.ThrowIfNull(command);
+
+            string idempotencyKey = ValidateIdempotencyKey(command.IdempotencyKey);
+            DateTimeOffset now = timeProvider.GetUtcNow();
+
+            var replay = await cancellationRequests.FindByIdempotencyKeyAsync(
+                idempotencyKey,
+                cancellationToken);
+
+            if (replay is not null)
+            {
+                EnsureReplayMatchesContract(replay, command.ContractId);
+                CreateCancellationRequestResult replayResult = ToResult(
+                    replay,
+                    isReplay: true);
+                RecordSuccess(activity, replayResult, startedAt);
+                return replayResult;
+            }
+
+            var contract = await contracts.GetByIdAsync(command.ContractId, cancellationToken)
+                ?? throw new ResourceNotFoundException("Contract", command.ContractId);
+
+            DateOnly requestedOn = DateOnly.FromDateTime(now.UtcDateTime);
+            var assessment = AssessForCreation(contract, requestedOn);
+
+            var request = CancellationRequest.Create(
+                contract.Id,
+                contract.CustomerId,
+                idempotencyKey,
+                now,
+                assessment);
+
+            var stored = await cancellationRequests.TryCreateAsync(request, cancellationToken);
+
+            CreateCancellationRequestResult result = stored.Outcome switch
+            {
+                CancellationRequestStoreOutcome.Created => ToResult(
+                    stored.Request,
+                    isReplay: false),
+                CancellationRequestStoreOutcome.Replayed => ReplayResult(
+                    stored.Request,
+                    command.ContractId),
+                CancellationRequestStoreOutcome.OpenRequestExists =>
+                    throw new ApplicationConflictException(
+                        "cancellation_request_already_open",
+                        "A different cancellation request is already open for this contract."),
+                CancellationRequestStoreOutcome.IdempotencyKeyConflict =>
+                    throw new ApplicationConflictException(
+                        "idempotency_key_conflict",
+                        "The idempotency key has already been used for a different operation."),
+                _ => throw new InvalidOperationException(
+                    $"Unsupported store outcome '{stored.Outcome}'."),
+            };
+
+            RecordSuccess(activity, result, startedAt);
+            return result;
         }
-
-        var contract = await contracts.GetByIdAsync(command.ContractId, cancellationToken)
-            ?? throw new ResourceNotFoundException("Contract", command.ContractId);
-
-        DateOnly requestedOn = DateOnly.FromDateTime(now.UtcDateTime);
-        var assessment = AssessForCreation(contract, requestedOn);
-
-        var request = CancellationRequest.Create(
-            contract.Id,
-            contract.CustomerId,
-            idempotencyKey,
-            now,
-            assessment);
-
-        var stored = await cancellationRequests.TryCreateAsync(request, cancellationToken);
-
-        return stored.Outcome switch
+        catch (Exception exception)
         {
-            CancellationRequestStoreOutcome.Created => ToResult(stored.Request, isReplay: false),
-            CancellationRequestStoreOutcome.Replayed => ReplayResult(stored.Request, command.ContractId),
-            CancellationRequestStoreOutcome.OpenRequestExists => throw new ApplicationConflictException(
-                "cancellation_request_already_open",
-                "A different cancellation request is already open for this contract."),
-            CancellationRequestStoreOutcome.IdempotencyKeyConflict => throw new ApplicationConflictException(
-                "idempotency_key_conflict",
-                "The idempotency key has already been used for a different operation."),
-            _ => throw new InvalidOperationException($"Unsupported store outcome '{stored.Outcome}'."),
-        };
+            string outcome = exception is OperationCanceledException
+                ? "cancelled"
+                : "failed";
+
+            activity?.SetTag("contractiq.outcome", outcome);
+            ContractIqTelemetry.MarkError(activity, exception);
+            ContractIqTelemetry.RecordCancellationCommand(
+                outcome,
+                isReplay: false,
+                Stopwatch.GetElapsedTime(startedAt));
+            throw;
+        }
+    }
+
+    private static void RecordSuccess(
+        Activity? activity,
+        CreateCancellationRequestResult result,
+        long startedAt)
+    {
+        string outcome = result.IsReplay ? "replayed" : "created";
+
+        activity?.SetTag("contractiq.outcome", outcome);
+        activity?.SetTag("contractiq.command.is_replay", result.IsReplay);
+        activity?.SetStatus(ActivityStatusCode.Ok);
+        ContractIqTelemetry.RecordCancellationCommand(
+            outcome,
+            result.IsReplay,
+            Stopwatch.GetElapsedTime(startedAt));
     }
 
     private static CancellationAssessment AssessForCreation(

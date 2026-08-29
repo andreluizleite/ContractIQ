@@ -180,6 +180,22 @@ Run the same command again to verify idempotency. Unchanged document versions ar
 
 See [Local knowledge retrieval](knowledge/local-retrieval.md) for ranking and indexing details, and [Grounded contract assistant](assistant/grounded-answers.md) for generation, citations, refusal behavior, and safety boundaries.
 
+## Inspect local telemetry
+
+OpenTelemetry export and the Aspire Dashboard are optional. Start the local
+dashboard profile, enable export in the API terminal, and then generate requests:
+
+```powershell
+docker compose --profile observability up -d aspire-dashboard
+$env:OpenTelemetry__Enabled = 'true'
+$env:OpenTelemetry__OtlpEndpoint = 'http://localhost:4317'
+dotnet run --project src/ContractIQ.Api
+```
+
+Open `http://localhost:18888` to inspect correlated traces, structured logs, and
+metrics. No Azure account is used. See [Local telemetry](observability/local-telemetry.md)
+for the operation map, privacy boundary, health behavior, and troubleshooting.
+
 In a second terminal, start the React application:
 
 ```powershell
