@@ -164,6 +164,12 @@ docker compose exec ollama ollama pull qwen3:4b
 
 The pulls download the local embedding model and conversational model to the named volume `contractiq-ollama-data`. They do not create an Azure resource or token charge, but they use local disk, memory, and CPU. `embeddinggemma` is approximately 622 MB and `qwen3:4b` is approximately 2.5 GB.
 
+The assistant can instead use Kimi for chat and tool calling while retaining local
+`embeddinggemma` retrieval. This avoids loading `qwen3:4b` into memory. The hosted
+provider is opt-in and requires a local secret, so repository builds and tests never
+consume Kimi credits. See [Grounded contract assistant](assistant/grounded-answers.md#kimi-setup)
+for configuration and credential boundaries.
+
 Index the committed fictional documents:
 
 ```powershell

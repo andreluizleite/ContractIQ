@@ -7,7 +7,18 @@ The grounded assistant explains a contract question in English or Brazilian Port
 
 The language model writes the explanation. It is not the authority for eligibility, dates, chargeable periods, penalty amounts, document scope, or state changes.
 
-## Local setup
+## Provider choice
+
+The committed default is local Ollama so cloning or starting the repository never
+creates a hosted-model charge. The assistant chat provider can be changed to Kimi
+through local configuration. Retrieval embeddings remain local through
+`embeddinggemma` in both modes, so changing the chat provider does not require
+reindexing documents.
+
+No chat provider is called during application startup or automated tests. A hosted
+request occurs only when a user submits a sufficiently grounded assistant question.
+
+## Local Ollama setup
 
 The assistant requires both local models:
 
@@ -22,6 +33,58 @@ dotnet run --project src/ContractIQ.Api
 `embeddinggemma` creates query and document embeddings. `qwen3:4b` generates the bilingual explanation. The model files stay in the local `contractiq-ollama-data` Docker volume. No Azure credential, hosted resource, or token charge is required.
 
 The chat model is a larger optional download of approximately 2.5 GB. Normal customer, contract, assessment, and cancellation-request endpoints remain available without it.
+
+## Kimi setup
+
+Kimi uses its OpenAI-compatible Chat Completions endpoint and supports the same
+function-calling flow used by the local adapter. You need a Kimi Open Platform API
+key with API credits. Do not commit the key, place it in React, or paste it into an
+issue or pull request.
+
+The Kimi adapter omits the generic `Temperature` setting because K2.6 accepts only
+provider-defined fixed values. It also explicitly disables K2.6 thinking so the
+provider-specific `reasoning_content` field is not required across the assistant's
+multi-step tool calls. These settings do not change deterministic domain decisions.
+
+Store the provider selection and key in .NET user secrets on your own machine:
+
+```powershell
+dotnet user-secrets set "Assistant:Provider" "Kimi" --project src/ContractIQ.Api
+dotnet user-secrets set "Assistant:Kimi:ApiKey" "PASTE-YOUR-KEY-LOCALLY" --project src/ContractIQ.Api
+```
+
+The non-secret defaults are:
+
+```json
+{
+  "Assistant": {
+    "Kimi": {
+      "Endpoint": "https://api.moonshot.ai/v1",
+      "ChatModel": "kimi-k2.6"
+    }
+  }
+}
+```
+
+Alternatively, set the standard `MOONSHOT_API_KEY` environment variable and set
+only the provider through user secrets. Start PostgreSQL and Ollama for local
+embeddings, but the larger `qwen3:4b` chat model does not need to be loaded:
+
+```powershell
+docker compose --profile local-ai up -d postgres ollama
+dotnet run --project src/ContractIQ.Api
+```
+
+To return to the zero-cost local chat provider:
+
+```powershell
+dotnet user-secrets set "Assistant:Provider" "Ollama" --project src/ContractIQ.Api
+dotnet user-secrets remove "Assistant:Kimi:ApiKey" --project src/ContractIQ.Api
+```
+
+A Kimi Code subscription credential may use a different endpoint and may be
+restricted to coding agents. For this application, use a key issued by the Kimi
+Open Platform unless the account documentation explicitly states otherwise.
 
 ## API request
 
@@ -60,7 +123,7 @@ Run scoped hybrid knowledge retrieval
 build safe prompt     localized refusal
           |
           v
-IChatClient -> Ollama qwen3:4b
+IChatClient -> Ollama qwen3:4b or hosted Kimi
           |
           v
 answer + application-owned citations + assessment
@@ -115,6 +178,6 @@ These measures reduce prompt-injection risk but do not make model output authori
 
 ## Provider boundary
 
-The Application project depends on `IAssistantAnswerGenerator`. Infrastructure implements it with OllamaSharp behind Microsoft's `IChatClient` abstraction. This keeps the orchestration and tests independent from the provider and allows a later Microsoft Foundry adapter without moving domain authority into the model integration.
+The Application project depends on `IAssistantAnswerGenerator`. Infrastructure implements it behind Microsoft's `IChatClient` abstraction with either OllamaSharp or an OpenAI-compatible Kimi client. This keeps orchestration and tests independent from the provider and allows a later Microsoft Foundry adapter without moving domain authority into the model integration.
 
 The same assistant can now prepare a cancellation action through safe tool calling. See [Safe assistant tool calling](safe-tool-calling.md) for the human-confirmation and write boundary.

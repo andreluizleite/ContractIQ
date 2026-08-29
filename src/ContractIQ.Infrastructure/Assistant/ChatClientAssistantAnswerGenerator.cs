@@ -1,26 +1,32 @@
+using System.ClientModel;
 using ContractIQ.Application.Assistant;
 using ContractIQ.Application.Assistant.Tools;
 using ContractIQ.Application.Common.Exceptions;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
 using OllamaSharp.Models.Exceptions;
+using OpenAI;
+using OpenAIChatCompletionOptions = OpenAI.Chat.ChatCompletionOptions;
 
 namespace ContractIQ.Infrastructure.Assistant;
 
-internal sealed class OllamaAssistantAnswerGenerator : IAssistantAnswerGenerator, IDisposable
+/// <summary>
+/// Exposes the same application-owned tools to either a local Ollama model or
+/// the hosted Kimi API. Business decisions and writes remain in the application.
+/// </summary>
+internal sealed class ChatClientAssistantAnswerGenerator : IAssistantAnswerGenerator, IDisposable
 {
     private readonly IChatClient _chatClient;
     private readonly AssistantOptions _options;
     private readonly ContractAssistantReadTools _readTools;
 
-    public OllamaAssistantAnswerGenerator(
+    public ChatClientAssistantAnswerGenerator(
         AssistantOptions options,
         ContractAssistantReadTools readTools)
     {
         _options = options;
         _readTools = readTools;
-        _chatClient = new FunctionInvokingChatClient(
-            new OllamaApiClient(options.OllamaEndpoint, options.ChatModel))
+        _chatClient = new FunctionInvokingChatClient(CreateProviderClient(options))
         {
             AllowConcurrentInvocation = false,
             IncludeDetailedErrors = false,
@@ -69,25 +75,36 @@ internal sealed class OllamaAssistantAnswerGenerator : IAssistantAnswerGenerator
 
         try
         {
+            var chatOptions = new ChatOptions
+            {
+                ModelId = _options.ChatModel,
+                MaxOutputTokens = _options.MaximumOutputTokens,
+                // Kimi models have provider-defined fixed temperatures and reject
+                // the 0.1 value used by the local deterministic demo profile.
+                Temperature = _options.Provider == AssistantProvider.Ollama
+                    ? _options.Temperature
+                    : null,
+                AllowMultipleToolCalls = false,
+                Tools =
+                [
+                    getContract,
+                    assessCancellation,
+                    searchEvidence,
+                    prepareCancellation,
+                ],
+            };
+
+            if (_options.Provider == AssistantProvider.Kimi)
+            {
+                chatOptions.RawRepresentationFactory = _ => CreateKimiChatOptions();
+            }
+
             ChatResponse response = await _chatClient.GetResponseAsync(
                 [
                     new ChatMessage(ChatRole.System, prompt.SystemPrompt),
                     new ChatMessage(ChatRole.User, prompt.UserPrompt),
                 ],
-                new ChatOptions
-                {
-                    ModelId = _options.ChatModel,
-                    MaxOutputTokens = _options.MaximumOutputTokens,
-                    Temperature = _options.Temperature,
-                    AllowMultipleToolCalls = false,
-                    Tools =
-                    [
-                        getContract,
-                        assessCancellation,
-                        searchEvidence,
-                        prepareCancellation,
-                    ],
-                },
+                chatOptions,
                 cancellationToken);
 
             return new GeneratedAssistantAnswer(
@@ -95,15 +112,60 @@ internal sealed class OllamaAssistantAnswerGenerator : IAssistantAnswerGenerator
                 _options.ChatModel,
                 proposedAction);
         }
-        catch (Exception exception) when (
-            exception is HttpRequestException or OllamaException)
+        catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {
-            throw new ExternalDependencyUnavailableException(
-                "ollama",
-                $"Ollama is unavailable or chat model '{_options.ChatModel}' is not installed.",
-                exception);
+            throw CreateUnavailableException(exception);
+        }
+        catch (Exception exception) when (
+            exception is HttpRequestException or OllamaException or ClientResultException)
+        {
+            throw CreateUnavailableException(exception);
         }
     }
 
     public void Dispose() => _chatClient.Dispose();
+
+    private static IChatClient CreateProviderClient(AssistantOptions options)
+    {
+        if (options.Provider == AssistantProvider.Kimi)
+        {
+            var clientOptions = new OpenAIClientOptions
+            {
+                Endpoint = options.Endpoint,
+            };
+            var openAiClient = new OpenAIClient(
+                new ApiKeyCredential(options.ApiKey!),
+                clientOptions);
+
+            return openAiClient
+                .GetChatClient(options.ChatModel)
+                .AsIChatClient();
+        }
+
+        return new OllamaApiClient(options.Endpoint, options.ChatModel);
+    }
+
+#pragma warning disable SCME0001 // Patch is required for Kimi's provider-specific request field.
+    private static OpenAIChatCompletionOptions CreateKimiChatOptions()
+    {
+        var options = new OpenAIChatCompletionOptions();
+        options.Patch.Set(
+            "$.thinking"u8,
+            BinaryData.FromString("""{"type":"disabled"}"""));
+        return options;
+    }
+#pragma warning restore SCME0001
+
+    private ExternalDependencyUnavailableException CreateUnavailableException(
+        Exception exception)
+    {
+        string dependency = _options.Provider == AssistantProvider.Kimi
+            ? "kimi"
+            : "ollama";
+        string message = _options.Provider == AssistantProvider.Kimi
+            ? $"Kimi is unavailable or model '{_options.ChatModel}' cannot be accessed."
+            : $"Ollama is unavailable or chat model '{_options.ChatModel}' is not installed.";
+
+        return new ExternalDependencyUnavailableException(dependency, message, exception);
+    }
 }
