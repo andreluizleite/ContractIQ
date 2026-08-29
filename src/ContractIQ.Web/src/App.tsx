@@ -61,6 +61,7 @@ function errorMessage(error: unknown, language: Language) {
 
 export function App() {
   const [language, setLanguage] = useState<Language>('en')
+  const [customerSearch, setCustomerSearch] = useState('')
   const [customers, setCustomers] =
     useState<Loadable<CustomerSummary[]>>(initialLoad)
   const [customersReload, setCustomersReload] = useState(0)
@@ -94,6 +95,20 @@ export function App() {
         : undefined,
     [customers, selectedCustomerId],
   )
+
+  const visibleCustomers = useMemo(() => {
+    if (customers.status !== 'ready') {
+      return []
+    }
+
+    const normalizedSearch = customerSearch.trim().toLocaleLowerCase(language)
+
+    return normalizedSearch.length === 0
+      ? customers.data
+      : customers.data.filter((customer) =>
+          customer.name.toLocaleLowerCase(language).includes(normalizedSearch),
+        )
+  }, [customerSearch, customers, language])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -252,7 +267,11 @@ export function App() {
   }
 
   async function askAssistant() {
-    if (!selectedCustomerId || !selectedContractId || assistantQuestion.trim().length < 3) {
+    if (
+      !selectedCustomerId ||
+      !selectedContractId ||
+      assistantQuestion.trim().length < 3
+    ) {
       return
     }
 
@@ -282,47 +301,141 @@ export function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <a className="brand" href="#workspace" aria-label="ContractIQ home">
-          <span className="brand-mark" aria-hidden="true">
-            CQ
-          </span>
-          <span>ContractIQ</span>
-        </a>
+        <div className="topbar-inner">
+          <a className="brand" href="#overview" aria-label="ContractIQ home">
+            <span className="brand-mark" aria-hidden="true">
+              CQ
+            </span>
+            <span className="brand-copy">
+              <strong>ContractIQ</strong>
+              <small>Contract intelligence</small>
+            </span>
+          </a>
 
-        <label className="language-picker">
-          <span>{copy.languageLabel}</span>
-          <select
-            aria-label={copy.languageLabel}
-            value={language}
-            onChange={(event) => changeLanguage(event.target.value as Language)}
-          >
-            <option value="en">English</option>
-            <option value="pt-BR">Português (Brasil)</option>
-          </select>
-        </label>
+          <nav className="primary-navigation" aria-label={copy.navigationLabel}>
+            <a href="#overview">{copy.overviewNav}</a>
+            <a href="#contracts">{copy.workspaceNav}</a>
+            <a href="#assistant">{copy.assistantNav}</a>
+          </nav>
+
+          <div className="topbar-actions">
+            <span className="environment-badge">
+              <span aria-hidden="true" />
+              {copy.localEnvironment}
+            </span>
+            <label className="language-picker">
+              <span>{copy.languageLabel}</span>
+              <select
+                aria-label={copy.languageLabel}
+                value={language}
+                onChange={(event) =>
+                  changeLanguage(event.target.value as Language)
+                }
+              >
+                <option value="en">EN</option>
+                <option value="pt-BR">PT-BR</option>
+              </select>
+            </label>
+          </div>
+        </div>
       </header>
 
       <main id="workspace">
-        <section className="page-intro" aria-labelledby="page-title">
-          <p className="eyebrow">{copy.productEyebrow}</p>
-          <h1 id="page-title">{copy.title}</h1>
-          <p>{copy.description}</p>
+        <section
+          className="product-overview"
+          id="overview"
+          aria-labelledby="page-title"
+        >
+          <div className="page-intro">
+            <div className="release-badge">{copy.portfolioRelease}</div>
+            <p className="eyebrow">{copy.productEyebrow}</p>
+            <h1 id="page-title">{copy.title}</h1>
+            <p>{copy.description}</p>
+          </div>
+
+          <div className="overview-heading">
+            <div>
+              <h2>{copy.overviewTitle}</h2>
+              <p>{copy.overviewDescription}</p>
+            </div>
+            <span className="system-status">
+              <span aria-hidden="true" />
+              OpenTelemetry
+            </span>
+          </div>
+
+          <div className="overview-metrics">
+            <MetricCard
+              detail={copy.customerCount}
+              label={copy.customerMetric}
+              value={
+                customers.status === 'ready'
+                  ? String(customers.data.length).padStart(2, '0')
+                  : '—'
+              }
+            />
+            <MetricCard
+              detail={selectedCustomer?.name ?? copy.selectContextMetric}
+              label={copy.contractMetric}
+              value={
+                contracts?.status === 'ready'
+                  ? String(contracts.data.length).padStart(2, '0')
+                  : '—'
+              }
+            />
+            <MetricCard
+              accent
+              detail={copy.intelligenceMetricDetail}
+              label={copy.intelligenceMetric}
+              value={copy.intelligenceMetricValue}
+            />
+          </div>
         </section>
 
-        <section className="operations-layout" aria-label={copy.productEyebrow}>
+        <section
+          className="operations-layout"
+          id="contracts"
+          aria-label={copy.productEyebrow}
+        >
           <aside className="customer-panel">
             <div className="panel-heading">
-              <p className="step-number">01</p>
-              <div>
-                <h2>{copy.customers}</h2>
-                <p>{copy.customersDescription}</p>
+              <div className="panel-title">
+                <p className="step-number">01</p>
+                <div>
+                  <h2>{copy.customers}</h2>
+                  <p>{copy.customersDescription}</p>
+                </div>
               </div>
+              {customers.status === 'ready' && (
+                <span className="panel-count">{customers.data.length}</span>
+              )}
             </div>
 
+            {customers.status === 'ready' && customers.data.length > 0 && (
+              <label className="customer-search">
+                <span className="visually-hidden">{copy.searchCustomers}</span>
+                <span className="search-icon" aria-hidden="true">
+                  ⌕
+                </span>
+                <input
+                  onChange={(event) => setCustomerSearch(event.target.value)}
+                  placeholder={copy.searchCustomersPlaceholder}
+                  type="search"
+                  value={customerSearch}
+                />
+              </label>
+            )}
+
             {customers.status === 'loading' && (
-              <p className="state-message" role="status">
-                {copy.loadingCustomers}
-              </p>
+              <div
+                className="loading-list"
+                role="status"
+                aria-label={copy.loadingCustomers}
+              >
+                <span />
+                <span />
+                <span />
+              </div>
             )}
 
             {customers.status === 'error' && (
@@ -337,9 +450,15 @@ export function App() {
               <p className="state-message">{copy.noCustomers}</p>
             )}
 
-            {customers.status === 'ready' && customers.data.length > 0 && (
+            {customers.status === 'ready' &&
+              customers.data.length > 0 &&
+              visibleCustomers.length === 0 && (
+                <p className="state-message">{copy.noCustomerSearchResults}</p>
+              )}
+
+            {customers.status === 'ready' && visibleCustomers.length > 0 && (
               <div className="customer-list">
-                {customers.data.map((customer) => (
+                {visibleCustomers.map((customer) => (
                   <button
                     className="customer-button"
                     data-selected={customer.id === selectedCustomerId}
@@ -374,11 +493,20 @@ export function App() {
             {selectedCustomer && (
               <>
                 <div className="contract-panel-header">
-                  <div>
-                    <p className="step-number">02</p>
-                    <h2>{selectedCustomer.name}</h2>
+                  <div className="contract-context">
+                    <span className="customer-avatar" aria-hidden="true">
+                      {selectedCustomer.name.slice(0, 2).toUpperCase()}
+                    </span>
+                    <div>
+                      <p className="step-number">02 · {copy.workspaceNav}</p>
+                      <h2>{selectedCustomer.name}</h2>
+                    </div>
                   </div>
-                  <span>{copy.contracts}</span>
+                  {contracts?.status === 'ready' && (
+                    <span className="context-count">
+                      {contracts.data.length} {copy.contracts.toLowerCase()}
+                    </span>
+                  )}
                 </div>
 
                 {contracts?.status === 'loading' && (
@@ -410,8 +538,14 @@ export function App() {
                           data-selected={contract.id === selectedContractId}
                           onClick={() => selectContract(contract.id)}
                         >
-                          <span>
-                            {copy.contract} {shortId(contract.id)}
+                          <span className="contract-tab-copy">
+                            <strong>
+                              {copy.contract} {shortId(contract.id)}
+                            </strong>
+                            <small>
+                              {formatMoney(contract.monthlyFee, language)} ·{' '}
+                              {formatDate(contract.startDate, language)}
+                            </small>
                           </span>
                           <StatusBadge
                             label={copy.statusLabels[contract.status]}
@@ -572,15 +706,39 @@ function AssistantPanel({
   const copy = translations[language]
 
   return (
-    <article className="assistant-card">
+    <article className="assistant-card" id="assistant">
       <div className="assistant-heading">
-        <div>
-          <p className="step-number">03</p>
-          <h3>{copy.assistantTitle}</h3>
+        <div className="assistant-identity">
+          <span className="assistant-mark" aria-hidden="true">
+            ✦
+          </span>
+          <div>
+            <p className="step-number">03 · {copy.assistantStatus}</p>
+            <h3>{copy.assistantTitle}</h3>
+          </div>
         </div>
         <span>AI + RAG + TOOLS</span>
       </div>
       <p className="assistant-description">{copy.assistantDescription}</p>
+
+      <div className="suggested-questions">
+        <span>{copy.suggestedQuestions}</span>
+        <div>
+          {[
+            copy.cancellationQuestion,
+            copy.penaltyQuestion,
+            copy.createRequestQuestion,
+          ].map((suggestion) => (
+            <button
+              key={suggestion}
+              onClick={() => onQuestionChange(suggestion)}
+              type="button"
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <label className="assistant-question">
         <span>{copy.assistantQuestionLabel}</span>
@@ -790,6 +948,26 @@ function ContractWorkspaceView({
         )}
       </article>
     </div>
+  )
+}
+
+function MetricCard({
+  accent = false,
+  detail,
+  label,
+  value,
+}: {
+  accent?: boolean
+  detail: string
+  label: string
+  value: string
+}) {
+  return (
+    <article className="metric-card" data-accent={accent}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <small>{detail}</small>
+    </article>
   )
 }
 
