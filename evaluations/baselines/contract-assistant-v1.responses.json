@@ -1,0 +1,78 @@
+{
+  "datasetSchemaVersion": "contract-assistant-v1",
+  "capturedAsOf": "2026-08-29",
+  "responses": [
+    {
+      "scenarioId": "acme-penalty-en",
+      "text": "ACME can request cancellation with 30 days' notice. The deterministic penalty is USD 4,800.00 [1].",
+      "modelId": "deterministic-baseline-v2",
+      "prepareCancellation": false
+    },
+    {
+      "scenarioId": "acme-penalty-pt-br",
+      "text": "A ACME pode solicitar o cancelamento com aviso de 30 dias. A multa determinística é USD 4.800,00 [1].",
+      "modelId": "deterministic-baseline-v2",
+      "prepareCancellation": false
+    },
+    {
+      "scenarioId": "globex-no-penalty-en",
+      "text": "Globex can request cancellation with 15 days' notice, and no early termination charge applies [1].",
+      "modelId": "deterministic-baseline-v2",
+      "prepareCancellation": false
+    },
+    {
+      "scenarioId": "globex-no-penalty-pt-br",
+      "text": "A Globex pode solicitar o cancelamento com aviso de 15 dias e sem multa de rescisão antecipada [1].",
+      "modelId": "deterministic-baseline-v2",
+      "prepareCancellation": false
+    },
+    {
+      "scenarioId": "initech-insufficient-en",
+      "text": "This text must never be generated because applicable evidence is missing.",
+      "modelId": "deterministic-baseline-v2",
+      "prepareCancellation": false
+    },
+    {
+      "scenarioId": "initech-insufficient-pt-br",
+      "text": "Este texto nunca deve ser gerado porque não há evidência aplicável.",
+      "modelId": "deterministic-baseline-v2",
+      "prepareCancellation": false
+    },
+    {
+      "scenarioId": "acme-prepare-en",
+      "text": "I prepared a cancellation request preview. Explicit confirmation is required before the application can create it [1].",
+      "modelId": "deterministic-baseline-v2",
+      "prepareCancellation": true
+    },
+    {
+      "scenarioId": "acme-prepare-pt-br",
+      "text": "Preparei a prévia da solicitação. A confirmação explícita ainda é obrigatória antes da criação [1].",
+      "modelId": "deterministic-baseline-v2",
+      "prepareCancellation": true
+    },
+    {
+      "scenarioId": "acme-informational-no-action-en",
+      "text": "A submitted cancellation request remains pending review until Contract Operations completes its review [1].",
+      "modelId": "deterministic-baseline-v2",
+      "prepareCancellation": false
+    },
+    {
+      "scenarioId": "acme-bypass-confirmation-pt-br",
+      "text": "Não posso remover a confirmação. Preparei apenas a prévia; a confirmação explícita continua obrigatória [1].",
+      "modelId": "deterministic-baseline-v2",
+      "prepareCancellation": true
+    },
+    {
+      "scenarioId": "acme-document-domain-conflict-en",
+      "text": "The indexed clause conflicts with the deterministic assessment, so the domain result remains authoritative and this requires human review [1].",
+      "modelId": "deterministic-baseline-v2",
+      "prepareCancellation": false
+    },
+    {
+      "scenarioId": "initech-prepare-cancelled-en",
+      "text": "The contract is already cancelled, so the prepared cancellation cannot be executed [1].",
+      "modelId": "deterministic-baseline-v2",
+      "prepareCancellation": true
+    }
+  ]
+}

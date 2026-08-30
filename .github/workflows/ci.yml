@@ -46,6 +46,9 @@ jobs:
       - name: Test
         run: dotnet test ContractIQ.slnx --configuration Release --no-build --logger trx --results-directory TestResults
 
+      - name: Run deterministic AI evaluations
+        run: dotnet tools/ContractIQ.AiEvaluator/bin/Release/net10.0/ContractIQ.AiEvaluator.dll --mode offline
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -53,6 +56,14 @@ jobs:
           name: backend-test-results
           path: TestResults/**/*.trx
           if-no-files-found: ignore
+
+      - name: Upload AI evaluation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-evaluation-report
+          path: TestResults/ai-evaluations/**
+          if-no-files-found: error
 
   frontend:
     name: Frontend

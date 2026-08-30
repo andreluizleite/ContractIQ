@@ -6,11 +6,13 @@
     <Project Path="src/ContractIQ.Infrastructure/ContractIQ.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/ContractIQ.AI.Evaluations/ContractIQ.AI.Evaluations.csproj" />
     <Project Path="tests/ContractIQ.Application.Tests/ContractIQ.Application.Tests.csproj" />
     <Project Path="tests/ContractIQ.Domain.Tests/ContractIQ.Domain.Tests.csproj" />
     <Project Path="tests/ContractIQ.IntegrationTests/ContractIQ.IntegrationTests.csproj" />
   </Folder>
   <Folder Name="/tools/">
+    <Project Path="tools/ContractIQ.AiEvaluator/ContractIQ.AiEvaluator.csproj" />
     <Project Path="tools/ContractIQ.DocumentIndexer/ContractIQ.DocumentIndexer.csproj" />
   </Folder>
 </Solution>

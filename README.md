@@ -32,6 +32,7 @@ Cancellation eligibility, dates, penalties, validation, authorization, idempoten
 - [Local knowledge retrieval](docs/knowledge/local-retrieval.md)
 - [Grounded contract assistant](docs/assistant/grounded-answers.md)
 - [Safe assistant tool calling](docs/assistant/safe-tool-calling.md)
+- [Local-first AI evaluations](docs/assistant/ai-evaluations.md)
 - [Local OpenTelemetry and dashboard](docs/observability/local-telemetry.md)
 - [Contract workspace UX specification](docs/ux/contract-workspace.md)
 - [Delivery roadmap](docs/roadmap.md)
@@ -58,6 +59,8 @@ npm run dev
 Open the URL printed by Vite, normally `http://localhost:5173`. The interface supports English and Brazilian Portuguese and proxies its local API requests to the .NET process.
 
 The product workspace provides an operational overview, searchable customer navigation, contract and cancellation context, suggested assistant questions, cited answers, and an explicit confirmation step before any AI-prepared write action is executed.
+
+The versioned AI evaluation harness applies free deterministic safety gates in CI and supports an optional live run against the locally configured assistant provider. Required checks cover domain consistency, citation integrity, evidence insufficiency, bilingual behavior, safe tool routing, and explicit confirmation.
 
 The API applies committed migrations and idempotent fictional seed data during startup. The database port is bound to the local machine only. The committed credentials are fictional and intended exclusively for local development.
 
