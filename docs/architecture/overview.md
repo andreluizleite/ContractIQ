@@ -11,18 +11,21 @@ flowchart TB
     Application --> Queries[Query handlers]
     Application --> Commands[Command handlers]
     Application --> Assistant[Assistant orchestration]
-    Assistant --> Tools[Application tools]
+    Assistant --> Tools[Scoped application tools]
     Tools --> Queries
     Tools --> Commands
     Queries --> Domain[Domain model]
     Commands --> Domain
     Infrastructure[Infrastructure adapters] -. implements ports .-> Application
-    Infrastructure --> PostgreSQL[PostgreSQL and pgvector]
-    Infrastructure --> LocalAI[Local AI provider]
-    Infrastructure --> Foundry[Microsoft Foundry]
-    Infrastructure --> AzureSearch[Azure AI Search]
+    Infrastructure --> PostgreSQL[(PostgreSQL and pgvector)]
+    Infrastructure --> Ollama[Ollama embeddings and optional chat]
+    Infrastructure -. optional hosted chat .-> Kimi[Kimi API]
     Api -. traces, metrics, logs .-> Dashboard[Local Aspire Dashboard]
 ```
+
+The diagram shows implemented v1 components. Microsoft Entra ID, Microsoft
+Foundry, and Azure AI Search are tracked future adapters, not runtime dependencies
+or provisioned resources in this release.
 
 ## Logical boundaries
 
@@ -64,11 +67,28 @@ Retrieved document content is untrusted data. Instructions inside a document can
 
 ## Execution profiles
 
-- `Demo`: no Azure account and no local model requirement.
-- `LocalAi`: local chat and embeddings without Azure token costs.
-- `Azure`: optional Microsoft Foundry and Azure AI Search adapters.
+- `StructuredDemo`: PostgreSQL, the API, and React; no Azure account, hosted key,
+  or local model is required.
+- `LocalAi`: Ollama supplies local embeddings and optional local chat without an
+  external token charge.
+- `KimiChat`: Ollama continues to supply local embeddings while the explicitly
+  configured hosted Kimi adapter supplies chat and tool calling.
+- `FutureAzure`: Microsoft Foundry and Azure AI Search remain planned behind the
+  existing application ports and are not implemented in v1.
 
 The default developer experience remains functional without Azure.
+
+## Implemented and planned adapters
+
+| Capability             | v1 implementation                     | Planned option                                              |
+| ---------------------- | ------------------------------------- | ----------------------------------------------------------- |
+| Structured persistence | PostgreSQL through EF Core/Npgsql     | No alternative required for the portfolio MVP               |
+| Lexical retrieval      | PostgreSQL full-text search           | Azure AI Search BM25                                        |
+| Vector retrieval       | pgvector cosine similarity            | Azure AI Search vector search                               |
+| Embeddings             | Ollama `embeddinggemma`               | Microsoft Foundry embedding deployment                      |
+| Chat and tool calling  | Ollama `qwen3:4b` or hosted Kimi      | Microsoft Foundry chat deployment                           |
+| Identity               | Anonymous local `Development` profile | Microsoft Entra ID                                          |
+| Telemetry backend      | Optional local Aspire Dashboard       | Azure Monitor/Application Insights after a hosting decision |
 
 ## Observability boundary
 
