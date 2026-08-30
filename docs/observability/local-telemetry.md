@@ -85,6 +85,10 @@ Telemetry intentionally excludes:
 - customer IDs, contract IDs, cancellation request IDs, and document paths;
 - token content or model reasoning content.
 
+Standard ASP.NET Core server spans keep the matched route template, such as
+`/api/v1/contracts/{contractId:guid}`, but a privacy processor removes raw URL
+path/full-URL attributes before export so route values cannot carry contract IDs.
+
 Safe dimensions include operation name, provider and model name, language,
 outcome, duration, counts, and whether a tool is state-changing. The model HTTP
 instrumentation uses standard request metadata and does not capture request or

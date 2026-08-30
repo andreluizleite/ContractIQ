@@ -4,6 +4,7 @@ using ContractIQ.Api.Endpoints;
 using ContractIQ.Api.Errors;
 using ContractIQ.Api.Health;
 using ContractIQ.Api.Observability;
+using ContractIQ.Api.Security;
 using ContractIQ.Application.Assistant;
 using ContractIQ.Application.Assistant.Tools;
 using ContractIQ.Application.Cancellations.CreateCancellationRequest;
@@ -18,6 +19,12 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
+LocalDemoEnvironmentGuard.EnsureSupported(builder.Environment.EnvironmentName);
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.AddServerHeader = false;
+    options.Limits.MaxRequestBodySize = 64 * 1024;
+});
 builder.AddContractIqOpenTelemetry();
 
 builder.Services.AddProblemDetails(options =>
@@ -31,6 +38,7 @@ builder.Services.AddProblemDetails(options =>
 builder.Services.AddExceptionHandler<ApplicationExceptionHandler>();
 builder.Services.AddHealthChecks();
 builder.Services.AddOpenApi();
+builder.Services.AddContractIqRateLimiting();
 
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(
@@ -55,7 +63,9 @@ var app = builder.Build();
 await app.Services.InitializeDatabaseAsync();
 
 app.UseMiddleware<RequestCorrelationMiddleware>();
+app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseExceptionHandler();
+app.UseRateLimiter();
 
 if (app.Environment.IsDevelopment())
 {

@@ -105,9 +105,17 @@ public sealed class AssistantOptions
                 "Assistant temperature must be between 0 and 2.");
         }
 
+        var endpointUri = new Uri(endpoint, UriKind.Absolute);
+
+        if (provider == AssistantProvider.Kimi && endpointUri.Scheme != Uri.UriSchemeHttps)
+        {
+            throw new InvalidOperationException(
+                "Kimi endpoint must use HTTPS because the hosted request contains an API key.");
+        }
+
         return new AssistantOptions(
             provider,
-            new Uri(endpoint, UriKind.Absolute),
+            endpointUri,
             model,
             apiKey,
             maximumOutputTokens,

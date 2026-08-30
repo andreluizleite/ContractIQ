@@ -9,6 +9,8 @@ public sealed class SearchKnowledgeHandler(
     IKnowledgeIndex knowledgeIndex,
     TimeProvider timeProvider) : IKnowledgeSearch
 {
+    private const int MaximumQueryCharacters = 1_000;
+
     public async Task<IReadOnlyList<KnowledgeEvidence>> HandleAsync(
         SearchKnowledgeQuery query,
         CancellationToken cancellationToken = default)
@@ -26,6 +28,13 @@ public sealed class SearchKnowledgeHandler(
                 throw new ApplicationValidationException(
                     nameof(query.Query),
                     "Query must contain at least 3 characters.");
+            }
+
+            if (query.Query.Length > MaximumQueryCharacters)
+            {
+                throw new ApplicationValidationException(
+                    nameof(query.Query),
+                    $"Query cannot exceed {MaximumQueryCharacters} characters.");
             }
 
             if (query.CustomerId == Guid.Empty)

@@ -29,7 +29,8 @@ started explicitly, and creates no Azure resources.
 
 Prompts, answers, document content, secrets, business identifiers, idempotency
 keys, and request/response bodies are not exported. Numeric token usage is
-recorded only when the provider supplies it.
+recorded only when the provider supplies it. Server spans retain route templates,
+while a processor removes raw URL tags that could contain business identifiers.
 
 ## Consequences
 
