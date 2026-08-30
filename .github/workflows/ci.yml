@@ -27,15 +27,32 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Review dependency changes
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+        with:
+          fail-on-severity: moderate
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: 10.0.400
 
       - name: Restore
-        run: dotnet restore ContractIQ.slnx
+        run: >-
+          dotnet restore ContractIQ.slnx
+          --locked-mode
+          -p:NuGetAudit=true
+          -p:NuGetAuditMode=all
+          -p:NuGetAuditLevel=moderate
+          -p:TreatWarningsAsErrors=true
+
+      - name: Report vulnerable .NET dependencies
+        run: dotnet list ContractIQ.slnx package --vulnerable --include-transitive --no-restore
 
       - name: Verify formatting
         run: dotnet format ContractIQ.slnx --verify-no-changes --no-restore
@@ -51,7 +68,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: backend-test-results
           path: TestResults/**/*.trx
@@ -59,7 +76,7 @@ jobs:
 
       - name: Upload AI evaluation report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ai-evaluation-report
           path: TestResults/ai-evaluations/**
@@ -75,10 +92,12 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24.x
           cache: npm
@@ -86,6 +105,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Audit npm dependencies
+        run: npm audit --audit-level=high
 
       - name: Lint
         run: npm run lint

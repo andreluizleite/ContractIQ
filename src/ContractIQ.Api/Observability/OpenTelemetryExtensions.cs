@@ -39,6 +39,7 @@ public static class OpenTelemetryExtensions
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
                 .AddNpgsql()
+                .AddProcessor(new HttpRoutePrivacyProcessor())
                 .AddOtlpExporter(exporter => exporter.Endpoint = options.OtlpEndpoint))
             .WithMetrics(metrics => metrics
                 .SetExemplarFilter(ExemplarFilterType.TraceBased)

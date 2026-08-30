@@ -18,6 +18,12 @@ reindexing documents.
 No chat provider is called during application startup or automated tests. A hosted
 request occurs only when a user submits a sufficiently grounded assistant question.
 
+When Kimi is selected, the question, deterministic assessment, bounded excerpts
+from the fictional contract and policies, tool schemas, and requested read-tool
+results leave the developer machine. Use only fictional sample data in this
+portfolio demo. The configured Kimi endpoint must use HTTPS so the API key and
+payload are never sent over plaintext HTTP.
+
 ## Local Ollama setup
 
 The assistant requires both local models:

@@ -2,6 +2,8 @@
 
 ContractIQ is a portfolio-quality contract intelligence application that combines pragmatic enterprise .NET architecture with responsible AI engineering.
 
+> **Local demo security boundary:** v1 contains only fictional data and allows anonymous API access only in `Development`. The API refuses to start in `Staging` or `Production`; do not expose the local stack publicly. See [Security](SECURITY.md).
+
 The application answers contract questions using structured business data, deterministic domain rules, and cited evidence retrieved from contracts and internal policies. When a user requests a business operation, the AI can select an application tool, but validation, calculations, state changes, and transactions remain inside the .NET application.
 
 ## Project status
@@ -34,6 +36,7 @@ Cancellation eligibility, dates, penalties, validation, authorization, idempoten
 - [Safe assistant tool calling](docs/assistant/safe-tool-calling.md)
 - [Local-first AI evaluations](docs/assistant/ai-evaluations.md)
 - [Local OpenTelemetry and dashboard](docs/observability/local-telemetry.md)
+- [v1 security review](docs/security/v1-security-review.md)
 - [Contract workspace UX specification](docs/ux/contract-workspace.md)
 - [Delivery roadmap](docs/roadmap.md)
 - [Contributing](CONTRIBUTING.md)

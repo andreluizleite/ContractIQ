@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using ContractIQ.Api.Security;
 using ContractIQ.Application.Assistant;
 using ContractIQ.Application.Assistant.Tools;
 using ContractIQ.Application.Cancellations.CreateCancellationRequest;
@@ -51,6 +52,7 @@ public static class ApiEndpoints
         api.MapPost(
                 "/contracts/{contractId:guid}/cancellation-requests",
                 CreateCancellationRequestAsync)
+            .RequireRateLimiting(ApiRateLimitingExtensions.WritePolicy)
             .WithName("CreateCancellationRequest")
             .WithTags("Cancellation Requests")
             .WithSummary("Creates a cancellation request for review.")
@@ -63,6 +65,7 @@ public static class ApiEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         api.MapPost("/knowledge/search", SearchKnowledgeAsync)
+            .RequireRateLimiting(ApiRateLimitingExtensions.KnowledgePolicy)
             .WithName("SearchKnowledge")
             .WithTags("Knowledge")
             .WithSummary("Searches contract and policy evidence using local hybrid retrieval.")
@@ -73,6 +76,7 @@ public static class ApiEndpoints
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         api.MapPost("/assistant/answers", AskContractQuestionAsync)
+            .RequireRateLimiting(ApiRateLimitingExtensions.AssistantPolicy)
             .WithName("AskContractQuestion")
             .WithTags("Assistant")
             .WithSummary("Answers a contract question with deterministic assessment and citations.")
@@ -86,6 +90,7 @@ public static class ApiEndpoints
         api.MapPost(
                 "/assistant/actions/cancellation-requests",
                 ConfirmAssistantCancellationAsync)
+            .RequireRateLimiting(ApiRateLimitingExtensions.WritePolicy)
             .WithName("ConfirmAssistantCancellation")
             .WithTags("Assistant")
             .WithSummary("Executes a prepared cancellation tool after explicit confirmation.")

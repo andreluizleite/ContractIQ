@@ -49,6 +49,48 @@ public sealed class ApiEndpointsTests(PostgreSqlFixture postgres) : IAsyncLifeti
     }
 
     [Fact]
+    public async Task API_responses_include_local_demo_security_headers()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync(
+            "/api/v1/customers",
+            CancellationToken.None);
+
+        Assert.Equal("nosniff", Assert.Single(response.Headers.GetValues("X-Content-Type-Options")));
+        Assert.Equal("DENY", Assert.Single(response.Headers.GetValues("X-Frame-Options")));
+        Assert.Equal("no-referrer", Assert.Single(response.Headers.GetValues("Referrer-Policy")));
+        Assert.Equal("no-store", Assert.Single(response.Headers.GetValues("Cache-Control")));
+    }
+
+    [Fact]
+    public async Task Write_endpoints_return_problem_details_after_the_local_rate_limit()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        for (int attempt = 0; attempt < 10; attempt++)
+        {
+            using HttpResponseMessage allowed = await PostCancellationAsync(
+                client,
+                DemoDataIds.AcmeActiveContract,
+                idempotencyKey: null);
+            Assert.Equal(HttpStatusCode.BadRequest, allowed.StatusCode);
+        }
+
+        using HttpResponseMessage limited = await PostCancellationAsync(
+            client,
+            DemoDataIds.AcmeActiveContract,
+            idempotencyKey: null);
+
+        await AssertProblemDetailsAsync(
+            limited,
+            HttpStatusCode.TooManyRequests,
+            "rate_limit_exceeded");
+    }
+
+    [Fact]
     public async Task Customer_contracts_endpoint_returns_only_that_customers_contracts()
     {
         using var factory = CreateFactory();

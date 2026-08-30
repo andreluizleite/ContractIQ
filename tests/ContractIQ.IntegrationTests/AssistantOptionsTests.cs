@@ -53,6 +53,23 @@ public sealed class AssistantOptionsTests
     }
 
     [Fact]
+    public void Rejects_a_plaintext_kimi_endpoint()
+    {
+        IConfiguration configuration = BuildConfiguration(
+            new Dictionary<string, string?>
+            {
+                ["Assistant:Provider"] = "Kimi",
+                ["Assistant:Kimi:ApiKey"] = "local-test-key",
+                ["Assistant:Kimi:Endpoint"] = "http://hosted-provider.example/v1",
+            });
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => AssistantOptions.FromConfiguration(configuration));
+
+        Assert.Contains("HTTPS", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Rejects_an_unknown_provider()
     {
         IConfiguration configuration = BuildConfiguration(
