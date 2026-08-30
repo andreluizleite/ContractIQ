@@ -19,7 +19,7 @@ services:
       start_period: 10s
 
   ollama:
-    image: ollama/ollama:0.11.10@sha256:a5409cb903d30f9cd67e9f430dd336ddc9274e16fd78f75b675c42065991b4fd
+    image: ollama/ollama:0.33.2@sha256:020e4134285e2ef4d8fd801234176de3b4faadc992a3eb06c8e66a2f9d4c4ba2
     profiles: ["local-ai"]
     ports:
       - "127.0.0.1:${CONTRACTIQ_OLLAMA_PORT:-11434}:11434"
