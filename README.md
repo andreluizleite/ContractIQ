@@ -198,6 +198,6 @@ docs/                         Architecture, decisions, operations and demo mater
 
 ## Project status
 
-The local portfolio MVP is feature-complete and is being packaged as the first `v1.0.0` release. Microsoft Entra ID, Microsoft Foundry, and Azure AI Search are optional post-MVP roadmap items tracked separately; they are not required to run or evaluate this version.
+The local portfolio MVP is feature-complete and validated for the first `v1.0.0` release. Microsoft Entra ID, Microsoft Foundry, and Azure AI Search are optional post-MVP roadmap items tracked separately; they are not required to run or evaluate this version.
 
 ContractIQ uses fictional companies, contracts, policies, and rules. It is a software engineering demonstration and does not provide legal advice.
