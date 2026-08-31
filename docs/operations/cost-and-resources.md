@@ -121,7 +121,8 @@ ContractIQ v1 remains locally runnable without Azure credentials or automatic pr
 - Search-managed outbound identity, integrated vectorization, semantic ranking, and dedicated capacity remain a documented Basic-or-higher production evolution;
 - issue #13 records resource assumptions, budgets, keyless authentication, infrastructure as code, and the exact teardown boundary before deployment;
 - the USD 10 budget is an alerting target, not a hard spending cap;
-- model deployment stays out of the foundation template until live region, SKU, version, and quota checks are reviewed.
+- model deployments remain disabled by default until live region, SKU, version,
+  quota, and cost checks are reviewed and provisioning is explicitly approved.
 
 The optional Azure smoke workflow also remains inert until a person selects the
 `azure-dev` environment in GitHub Actions. One run makes one Foundry embedding

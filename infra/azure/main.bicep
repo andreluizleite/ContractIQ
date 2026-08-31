@@ -26,6 +26,25 @@ param developerPrincipalId string = ''
 @description('Optional service principal object ID used by the manual GitHub OIDC smoke test.')
 param smokeTestPrincipalId string = ''
 
+@description('Creates the validated pay-as-you-go chat and embedding model deployments. Keep false for foundation-only validation.')
+param deployModels bool = false
+
+@description('Chat model selected from the live Foundry catalog.')
+param chatModelName string = 'gpt-5-mini'
+
+@description('Pinned chat model version selected from the live Foundry catalog.')
+param chatModelVersion string = '2025-08-07'
+
+@description('Embedding model selected from the live Foundry catalog.')
+param embeddingModelName string = 'text-embedding-3-small'
+
+@description('Pinned embedding model version selected from the live Foundry catalog.')
+param embeddingModelVersion string = '1'
+
+@description('GlobalStandard deployment capacity in thousands of tokens per minute. Capacity reserves quota, not prepaid spend.')
+@minValue(1)
+param modelCapacity int = 1
+
 @description('Additional tags applied to every provisioned resource.')
 param tags object = {}
 
@@ -95,9 +114,15 @@ module aiPlatform 'modules/ai-platform.bicep' = {
   name: 'contractiq-ai-platform-${environmentName}'
   scope: resourceGroup
   params: {
+    chatModelName: chatModelName
+    chatModelVersion: chatModelVersion
     developerPrincipalId: developerPrincipalId
+    deployModels: deployModels
+    embeddingModelName: embeddingModelName
+    embeddingModelVersion: embeddingModelVersion
     environmentName: environmentName
     location: location
+    modelCapacity: modelCapacity
     smokeTestPrincipalId: smokeTestPrincipalId
     tags: commonTags
     uniqueSuffix: uniqueSuffix
@@ -109,5 +134,7 @@ output foundryAccountName string = aiPlatform.outputs.foundryAccountName
 output foundryProjectName string = aiPlatform.outputs.foundryProjectName
 output foundryEndpoint string = aiPlatform.outputs.foundryEndpoint
 output foundryOpenAIEndpoint string = aiPlatform.outputs.foundryOpenAIEndpoint
+output chatDeploymentName string = aiPlatform.outputs.chatDeploymentName
+output embeddingDeploymentName string = aiPlatform.outputs.embeddingDeploymentName
 output searchServiceName string = aiPlatform.outputs.searchServiceName
 output searchEndpoint string = aiPlatform.outputs.searchEndpoint

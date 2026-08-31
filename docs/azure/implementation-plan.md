@@ -38,16 +38,19 @@ ContractIQ does not deploy a second hosted agent in Foundry for this increment. 
 
 Status on 2026-08-31: the Azure foundation definitions, Foundry model adapters,
 Azure AI Search adapter, and bounded manual OIDC smoke-test workflow are
-implemented and validated without provisioning resources. Live execution still
-requires separately approved infrastructure, model deployment, and GitHub
-environment configuration.
+implemented and validated without provisioning resources. Brazil South has
+live catalog capacity and subscription quota for `gpt-5-mini` version
+`2025-08-07` and `text-embedding-3-small` version `1` on `GlobalStandard`.
+Their Bicep deployments remain disabled by default and live execution still
+requires explicitly approved provisioning and GitHub environment configuration.
 
 ### 1. Azure foundation — implemented, not deployed
 
 - validate the subscription, ownership, quota, and provider availability;
 - review Bicep with a subscription budget, one resource group, a Foundry account/project, free Azure AI Search, and RBAC;
 - run `what-if` and stop for explicit provisioning approval;
-- provision no model until its live SKU and quota are verified.
+- keep model resources behind `deployModels=false` until their live SKU, quota,
+  cost boundary, and provisioning are explicitly approved.
 
 ### 2. Foundry adapters — implemented, not invoked live
 
@@ -91,7 +94,8 @@ environment configuration.
 - Azure configuration contains no committed key or secret.
 - Azure AI Search uses the free SKU for the portfolio environment.
 - Search Free receives application calls through Entra RBAC but does not use a Search-managed identity, integrated vectorization, or semantic ranking.
-- Model deployments are selected from live catalog and quota data rather than hardcoded assumptions.
+- Model deployment defaults record a dated live selection and remain opt-in;
+  catalog and quota are checked again before a later deployment.
 - Hybrid results are scoped, grounded, and mapped to citations.
 - A hosted model cannot bypass confirmation or deterministic domain rules.
 - Normal PR CI performs no billable call.
