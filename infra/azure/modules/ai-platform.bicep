@@ -16,9 +16,29 @@ param developerPrincipalId string = ''
 @description('Optional service principal object ID for the manual GitHub OIDC smoke test.')
 param smokeTestPrincipalId string = ''
 
+@description('Whether the validated pay-as-you-go model deployments are included.')
+param deployModels bool = false
+
+@description('Chat model name selected from the live catalog.')
+param chatModelName string
+
+@description('Pinned chat model version selected from the live catalog.')
+param chatModelVersion string
+
+@description('Embedding model name selected from the live catalog.')
+param embeddingModelName string
+
+@description('Pinned embedding model version selected from the live catalog.')
+param embeddingModelVersion string
+
+@description('GlobalStandard capacity in thousands of tokens per minute.')
+param modelCapacity int
+
 var foundryAccountName = 'aif-contractiq-${environmentName}-${uniqueSuffix}'
 var foundryProjectName = 'contractiq-${environmentName}'
 var searchServiceName = 'srch-contractiq-${environmentName}-${uniqueSuffix}'
+var chatDeploymentName = 'contractiq-chat'
+var embeddingDeploymentName = 'contractiq-embeddings'
 
 var cognitiveServicesOpenAiUserRoleId = subscriptionResourceId(
   'Microsoft.Authorization/roleDefinitions',
@@ -66,6 +86,38 @@ resource foundryProject 'Microsoft.CognitiveServices/accounts/projects@2025-06-0
     description: 'Optional Microsoft Foundry project for the ContractIQ portfolio application.'
   }
   tags: tags
+}
+
+resource chatDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = if (deployModels) {
+  name: chatDeploymentName
+  parent: foundryAccount
+  sku: {
+    name: 'GlobalStandard'
+    capacity: modelCapacity
+  }
+  properties: {
+    model: {
+      format: 'OpenAI'
+      name: chatModelName
+      version: chatModelVersion
+    }
+  }
+}
+
+resource embeddingDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = if (deployModels) {
+  name: embeddingDeploymentName
+  parent: foundryAccount
+  sku: {
+    name: 'GlobalStandard'
+    capacity: modelCapacity
+  }
+  properties: {
+    model: {
+      format: 'OpenAI'
+      name: embeddingModelName
+      version: embeddingModelVersion
+    }
+  }
 }
 
 resource searchService 'Microsoft.Search/searchServices@2025-05-01' = {
@@ -156,5 +208,7 @@ output foundryAccountName string = foundryAccount.name
 output foundryProjectName string = foundryProject.name
 output foundryEndpoint string = foundryAccount.properties.endpoint
 output foundryOpenAIEndpoint string = 'https://${foundryAccount.name}.openai.azure.com/openai/v1/'
+output chatDeploymentName string = chatDeploymentName
+output embeddingDeploymentName string = embeddingDeploymentName
 output searchServiceName string = searchService.name
 output searchEndpoint string = 'https://${searchService.name}.search.windows.net'

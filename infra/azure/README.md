@@ -8,11 +8,15 @@ This folder contains the reviewed infrastructure boundary for ContractIQ's optio
 | --- | --- | --- |
 | Resource group | One isolated development group | No charge |
 | Subscription budget | USD 10 planning target with 50%, 80%, and 100% alerts | No charge; alerts do not stop spend |
-| Microsoft Foundry account and project | `AIServices`, public development endpoint, local authentication disabled | Account/project have no committed throughput; model inference is usage-based |
+| Microsoft Foundry account and project | `AIServices`, public development endpoint, local authentication disabled | Account/project have no committed throughput |
+| Optional model deployments | `gpt-5-mini` and `text-embedding-3-small`, `GlobalStandard`, 1K TPM each | No fixed deployment charge; inference is usage-based |
 | Azure AI Search | Free tier, one shared service with a 50 MB limit | No charge while the free tier remains available and its limits are respected |
 | Role assignments | Least-privilege roles for the local developer and optional GitHub OIDC service principal | No charge |
 
-No model deployment is declared yet. Model name, version, SKU, capacity, and region must be resolved against the live catalog and subscription quota immediately before a separate approved deployment.
+Model deployments are declared but disabled by default through `deployModels=false`.
+The selected names, versions, SKU, capacity, and region were resolved against
+the live catalog and subscription quota on 2026-08-31. They must be checked
+again if the deployment is executed later or in another subscription.
 
 The template outputs `foundryOpenAIEndpoint` in the form expected by the .NET
 chat and embedding adapters: `https://<resource-name>.openai.azure.com/openai/v1/`.
@@ -51,7 +55,10 @@ Before anyone runs a subscription deployment, record all of the following in the
 7. The exact `what-if` output.
 8. Explicit approval to provision.
 
-After provisioning and model deployment are separately approved, follow the [manual keyless smoke-test guide](../../docs/azure/manual-smoke-test.md). The live workflow is never triggered by a push or pull request and performs only one bounded indexing/query scenario.
+Set `deployModels=true` only in an explicitly reviewed deployment. After
+provisioning is approved, follow the [manual keyless smoke-test guide](../../docs/azure/manual-smoke-test.md).
+The live workflow is never triggered by a push or pull request and performs
+only one bounded indexing/query scenario.
 
 ## Teardown boundary
 
