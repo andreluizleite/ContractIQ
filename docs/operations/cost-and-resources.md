@@ -11,7 +11,7 @@ ContractIQ v1 is designed to be evaluated without an Azure subscription and with
 | Fully local assistant | Local retrieval + Ollama `qwen3:4b`       | No external charge                                                      | Approximately 2.5 GB more disk plus local RAM/CPU during generation |
 | Kimi assistant        | Local retrieval + Kimi API                | Consumes the account's provider credits per submitted grounded question | The larger local chat model is not required                         |
 | Local observability   | Any profile + Aspire Dashboard            | No external charge                                                      | Dashboard image, container memory, and temporary telemetry storage  |
-| Future Azure          | Not implemented in v1                     | No charge because no resource is provisioned                            | Tracked separately in issue #13                                     |
+| Planned Azure         | Foundry + free Azure AI Search             | Search Free has no hourly charge; Foundry model inference will consume credit only after a model is deployed and invoked | Infrastructure plan is tracked separately in issue #13          |
 
 Model sizes are approximate and can change when a model image is updated. Docker images, package caches, database records, and generated build artifacts require additional local disk space.
 
@@ -112,11 +112,15 @@ Build outputs can be recreated and are excluded from Git. Use the standard IDE o
 
 ## Azure boundary and teardown
 
-ContractIQ v1 contains no `azure.yaml`, Bicep, Terraform, Azure credentials, Azure resource names, or automatic Azure provisioning command. Therefore:
+ContractIQ v1 remains locally runnable without Azure credentials or automatic provisioning. The post-v1 roadmap now contains reviewed Bicep under `infra/azure`, but merely cloning, building, or testing it does not create resources. Therefore:
 
 - cloning, building, testing, and demonstrating v1 creates no Azure resource;
-- there is no Azure resource group to tear down for this version;
-- Microsoft Foundry and Azure AI Search in the roadmap describe optional future adapters, not deployed dependencies;
-- issue #13 must define resource SKUs, free-tier assumptions, budgets, secret handling, infrastructure as code, and an exact teardown command before any Azure deployment is approved.
+- no Azure resource group exists until an explicit subscription deployment is approved;
+- Microsoft Foundry and Azure AI Search remain optional adapters, not runtime dependencies;
+- the free Search profile stays keyless for inbound application calls through Entra RBAC, while application-owned code generates and uploads embeddings;
+- Search-managed outbound identity, integrated vectorization, semantic ranking, and dedicated capacity remain a documented Basic-or-higher production evolution;
+- issue #13 records resource assumptions, budgets, keyless authentication, infrastructure as code, and the exact teardown boundary before deployment;
+- the USD 10 budget is an alerting target, not a hard spending cap;
+- model deployment stays out of the foundation template until live region, SKU, version, and quota checks are reviewed.
 
 This boundary prevents a documentation example from accidentally creating a chargeable cloud resource.

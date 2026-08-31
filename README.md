@@ -192,12 +192,14 @@ docs/                         Architecture, decisions, operations and demo mater
 - [Security policy](SECURITY.md) and [v1 security review](docs/security/v1-security-review.md)
 - [Bilingual interview guide](docs/demo/interview-guide.md)
 - [Cost and resource management](docs/operations/cost-and-resources.md)
+- [Optional Azure AI implementation plan](docs/azure/implementation-plan.md)
+- [Azure infrastructure validation](infra/azure/README.md)
 - [v1.0.0 release checklist](docs/release/v1.0.0-checklist.md)
 - [Architecture Decision Records](docs/adr)
 - [Contributing](CONTRIBUTING.md)
 
 ## Project status
 
-The local portfolio MVP is feature-complete and validated for the first `v1.0.0` release. Microsoft Entra ID, Microsoft Foundry, and Azure AI Search are optional post-MVP roadmap items tracked separately; they are not required to run or evaluate this version.
+The local portfolio MVP is feature-complete and validated for the first `v1.0.0` release. The optional Microsoft Foundry and Azure AI Search profile is now being delivered incrementally, beginning with non-deploying infrastructure validation and cost controls. Microsoft Entra ID for end users remains a separate post-MVP item. None of these services is required to run or evaluate the local version.
 
 ContractIQ uses fictional companies, contracts, policies, and rules. It is a software engineering demonstration and does not provide legal advice.

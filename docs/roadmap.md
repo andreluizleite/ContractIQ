@@ -26,6 +26,8 @@ Generate grounded bilingual answers, expose safe application tools, require conf
 
 Add configurable Microsoft Entra ID authentication and optional Microsoft Foundry and Azure AI Search adapters without making Azure mandatory.
 
+The Azure AI foundation is now in planning and infrastructure-validation delivery. Foundry and Search adapters, live provisioning, and end-user Entra authentication remain separate reviewable slices.
+
 ## M6 - Portfolio Release
 
 OpenTelemetry, the optional local dashboard, the structural product redesign, and local-first AI evaluations are implemented. Complete the security review, demonstration material, and the first tagged release.
