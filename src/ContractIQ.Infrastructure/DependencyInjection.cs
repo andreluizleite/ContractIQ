@@ -34,11 +34,14 @@ public static class DependencyInjection
         KnowledgeIndexOptions knowledgeIndexOptions =
             KnowledgeIndexOptions.FromConfiguration(configuration);
         AssistantOptions assistantOptions = AssistantOptions.FromConfiguration(configuration);
+        FoundryClientOptions foundryClientOptions =
+            FoundryClientOptions.FromConfiguration(configuration);
         return services.AddInfrastructure(
             connectionString,
             knowledgeOptions,
             assistantOptions,
-            knowledgeIndexOptions);
+            knowledgeIndexOptions,
+            foundryClientOptions);
     }
 
     public static IServiceCollection AddInfrastructure(
@@ -86,11 +89,13 @@ public static class DependencyInjection
         string connectionString,
         KnowledgeOptions knowledgeOptions,
         AssistantOptions assistantOptions,
-        KnowledgeIndexOptions? knowledgeIndexOptions = null)
+        KnowledgeIndexOptions? knowledgeIndexOptions = null,
+        FoundryClientOptions? foundryClientOptions = null)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
         knowledgeIndexOptions ??= KnowledgeIndexOptions.Local;
+        foundryClientOptions ??= FoundryClientOptions.Default;
 
         services.AddDbContext<ContractIqDbContext>(options =>
             options.UseNpgsql(
@@ -111,6 +116,7 @@ public static class DependencyInjection
         services.AddScoped<ICancellationRequestStore, PostgresCancellationRequestStore>();
         services.AddSingleton(knowledgeOptions);
         services.AddSingleton(knowledgeIndexOptions);
+        services.AddSingleton(foundryClientOptions);
         services.AddSingleton<IKnowledgeDocumentCatalog, FileSystemKnowledgeDocumentCatalog>();
         services.AddSingleton<TokenCredential>(_ => new DefaultAzureCredential());
         if (knowledgeIndexOptions.Provider == KnowledgeIndexProvider.AzureAiSearch)

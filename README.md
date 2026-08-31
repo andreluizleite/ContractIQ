@@ -30,7 +30,7 @@ The model does not calculate penalties, authorize users, write to the database, 
 - provider-neutral chat, embeddings, and tool calling through `Microsoft.Extensions.AI`, using local Ollama, optional hosted Kimi, or keyless Microsoft Foundry;
 - explicit human confirmation, idempotency, transactions, and domain revalidation for AI-prepared writes;
 - OpenTelemetry traces, metrics, and structured logs with an optional local Aspire Dashboard;
-- automated domain, application, integration, frontend, security, and deterministic AI evaluation gates;
+- automated domain, application, integration, frontend, security, and deterministic AI evaluation gates, plus an isolated manual keyless Azure smoke test;
 - GitHub Issues, short-lived branches, protected pull requests, Dependabot, and reproducible dependency locks.
 
 ## How it works
@@ -132,7 +132,7 @@ The required GitHub Actions workflow restores locked dependencies, audits NuGet 
 
 Current release-candidate coverage includes:
 
-- 156 backend tests across domain, application, integration, and AI evaluation projects;
+- 167 backend tests across domain, application, integration, and AI evaluation projects;
 - 15 React component and workflow tests;
 - 12 deterministic AI safety scenarios covering grounding, citation integrity, bilingual behavior, refusal, and tool routing.
 
@@ -175,7 +175,7 @@ src/
   ContractIQ.Api/             HTTP composition root, security and telemetry
   ContractIQ.Web/             React and TypeScript product workspace
 tests/                        Domain, application, integration and AI evaluations
-tools/                        Document indexer and deterministic AI evaluator
+tools/                        Document indexer, Azure smoke test and deterministic AI evaluator
 evaluations/                  Versioned evaluation scenarios
 sample-data/                  Fictional contracts and internal policies
 docs/                         Architecture, decisions, operations and demo material
@@ -197,6 +197,7 @@ docs/                         Architecture, decisions, operations and demo mater
 - [Optional Azure AI implementation plan](docs/azure/implementation-plan.md)
 - [Microsoft Foundry model adapters](docs/azure/foundry-model-adapters.md)
 - [Azure AI Search adapter](docs/azure/azure-ai-search-adapter.md)
+- [Manual keyless Azure AI smoke test](docs/azure/manual-smoke-test.md)
 - [Azure infrastructure validation](infra/azure/README.md)
 - [v1.0.0 release checklist](docs/release/v1.0.0-checklist.md)
 - [Architecture Decision Records](docs/adr)
@@ -204,6 +205,6 @@ docs/                         Architecture, decisions, operations and demo mater
 
 ## Project status
 
-The local portfolio MVP is feature-complete and validated for the first `v1.0.0` release. The optional Microsoft Foundry and Azure AI Search adapters plus the non-deploying Azure infrastructure foundation are implemented incrementally. Live Azure validation and Microsoft Entra ID for end users remain separate post-MVP items. None of these services is required to run or evaluate the local version.
+The local portfolio MVP is feature-complete and validated for the first `v1.0.0` release. The optional Microsoft Foundry and Azure AI Search adapters, non-deploying Azure infrastructure foundation, and manually dispatched OIDC smoke-test workflow are implemented incrementally. The workflow has not made a live call; provisioning and live Azure validation still require explicit approval. Microsoft Entra ID for end users remains a separate post-MVP item. None of these services is required to run or evaluate the local version.
 
 ContractIQ uses fictional companies, contracts, policies, and rules. It is a software engineering demonstration and does not provide legal advice.

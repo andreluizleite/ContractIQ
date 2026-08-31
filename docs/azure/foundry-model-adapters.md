@@ -49,7 +49,10 @@ dotnet user-secrets set "Foundry:EmbeddingDimensions" "768" --project src/Contra
 
 The endpoint must use HTTPS and end with `/openai/v1/`. Deployment names cannot
 be empty. Embedding dimensions must be explicitly configured and must equal 768
-while the local pgvector schema remains `vector(768)`.
+while the local pgvector schema remains `vector(768)`. Normal runtime defaults
+to three transient retries; the bounded manual smoke test overrides
+`Foundry:MaximumRetries` to `0` so a failed run cannot repeat model consumption
+automatically.
 
 Changing the embedding deployment changes the stored embedding model identity.
 Run the document indexer again so document chunks are regenerated consistently.

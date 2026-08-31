@@ -37,8 +37,10 @@ ContractIQ does not deploy a second hosted agent in Foundry for this increment. 
 ## Delivery slices
 
 Status on 2026-08-31: the Azure foundation definitions, Foundry model adapters,
-and Azure AI Search adapter are implemented and validated without provisioning
-resources. Manual keyless smoke testing is the next delivery slice.
+Azure AI Search adapter, and bounded manual OIDC smoke-test workflow are
+implemented and validated without provisioning resources. Live execution still
+requires separately approved infrastructure, model deployment, and GitHub
+environment configuration.
 
 ### 1. Azure foundation — implemented, not deployed
 
@@ -64,13 +66,17 @@ resources. Manual keyless smoke testing is the next delivery slice.
 - preserve customer and contract filters before ranking;
 - map Azure results to application-owned `KnowledgeEvidence` citations.
 
-### 4. CI and live validation
+### 4. CI and live validation — implemented, not invoked live
 
 - compile Bicep on ordinary pull requests without Azure authentication;
 - run unit and simulated integration tests without hosted calls;
-- add a manually dispatched smoke test for a small, bounded Azure query;
-- use GitHub OIDC for future automated Azure access instead of a stored client secret;
+- add a manually dispatched smoke test that sends one two-input embedding batch,
+  indexes one fictional chunk, and runs one hybrid query;
+- use GitHub OIDC through the explicitly selected `azure-dev` environment instead
+  of a stored client secret;
 - never provision or invoke a model automatically on every push.
+- disable provider SDK retries for the bounded live run and publish only
+  cost-relevant counts and duration.
 
 ### 5. Documentation and portfolio proof
 

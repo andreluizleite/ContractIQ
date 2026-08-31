@@ -23,6 +23,9 @@ param budgetStartDate string = utcNow('yyyy-MM-01')
 @description('Optional Microsoft Entra object ID for the local developer. Leave empty during validation.')
 param developerPrincipalId string = ''
 
+@description('Optional service principal object ID used by the manual GitHub OIDC smoke test.')
+param smokeTestPrincipalId string = ''
+
 @description('Additional tags applied to every provisioned resource.')
 param tags object = {}
 
@@ -95,6 +98,7 @@ module aiPlatform 'modules/ai-platform.bicep' = {
     developerPrincipalId: developerPrincipalId
     environmentName: environmentName
     location: location
+    smokeTestPrincipalId: smokeTestPrincipalId
     tags: commonTags
     uniqueSuffix: uniqueSuffix
   }

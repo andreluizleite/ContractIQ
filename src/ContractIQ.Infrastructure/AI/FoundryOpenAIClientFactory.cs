@@ -10,7 +10,9 @@ namespace ContractIQ.Infrastructure.AI;
 /// injection so local Azure CLI credentials and future managed identities use
 /// the same application code.
 /// </summary>
-internal sealed class FoundryOpenAIClientFactory(TokenCredential credential)
+internal sealed class FoundryOpenAIClientFactory(
+    TokenCredential credential,
+    FoundryClientOptions options)
 {
     private const string FoundryTokenScope = "https://ai.azure.com/.default";
 
@@ -20,6 +22,7 @@ internal sealed class FoundryOpenAIClientFactory(TokenCredential credential)
         var clientOptions = new OpenAIClientOptions
         {
             Endpoint = endpoint,
+            RetryPolicy = new ClientRetryPolicy(options.MaximumRetries),
         };
 
         // The official Foundry keyless .NET pattern currently exposes this

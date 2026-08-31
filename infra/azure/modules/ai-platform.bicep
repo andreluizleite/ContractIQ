@@ -13,6 +13,9 @@ param tags object
 @description('Optional Microsoft Entra object ID for local keyless development.')
 param developerPrincipalId string = ''
 
+@description('Optional service principal object ID for the manual GitHub OIDC smoke test.')
+param smokeTestPrincipalId string = ''
+
 var foundryAccountName = 'aif-contractiq-${environmentName}-${uniqueSuffix}'
 var foundryProjectName = 'contractiq-${environmentName}'
 var searchServiceName = 'srch-contractiq-${environmentName}-${uniqueSuffix}'
@@ -115,6 +118,36 @@ resource searchDataRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = i
   properties: {
     principalId: developerPrincipalId
     principalType: 'User'
+    roleDefinitionId: searchIndexDataContributorRoleId
+  }
+}
+
+resource smokeFoundryInferenceRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(smokeTestPrincipalId)) {
+  name: guid(foundryAccount.id, smokeTestPrincipalId, cognitiveServicesOpenAiUserRoleId)
+  scope: foundryAccount
+  properties: {
+    principalId: smokeTestPrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: cognitiveServicesOpenAiUserRoleId
+  }
+}
+
+resource smokeSearchManagementRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(smokeTestPrincipalId)) {
+  name: guid(searchService.id, smokeTestPrincipalId, searchServiceContributorRoleId)
+  scope: searchService
+  properties: {
+    principalId: smokeTestPrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: searchServiceContributorRoleId
+  }
+}
+
+resource smokeSearchDataRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(smokeTestPrincipalId)) {
+  name: guid(searchService.id, smokeTestPrincipalId, searchIndexDataContributorRoleId)
+  scope: searchService
+  properties: {
+    principalId: smokeTestPrincipalId
+    principalType: 'ServicePrincipal'
     roleDefinitionId: searchIndexDataContributorRoleId
   }
 }
