@@ -53,6 +53,7 @@ ContractIQ does not deploy a second hosted agent in Foundry for this increment. 
 ### 3. Azure AI Search adapters
 
 - define a versioned index schema for document identity, scope, version, chunk text, citation metadata, and vectors;
+- generate embeddings through the application-owned Foundry adapter and push vectors to Search;
 - make indexing idempotent for the same document version;
 - execute keyword and vector retrieval in one hybrid request;
 - preserve customer and contract filters before ranking;
@@ -78,6 +79,7 @@ ContractIQ does not deploy a second hosted agent in Foundry for this increment. 
 - Local startup, tests, and demo do not contact Azure.
 - Azure configuration contains no committed key or secret.
 - Azure AI Search uses the free SKU for the portfolio environment.
+- Search Free receives application calls through Entra RBAC but does not use a Search-managed identity, integrated vectorization, or semantic ranking.
 - Model deployments are selected from live catalog and quota data rather than hardcoded assumptions.
 - Hybrid results are scoped, grounded, and mapped to citations.
 - A hosted model cannot bypass confirmation or deterministic domain rules.
@@ -90,6 +92,6 @@ ContractIQ does not deploy a second hosted agent in Foundry for this increment. 
 - hosting the API, React application, or PostgreSQL in Azure;
 - private networking and private endpoints;
 - a hosted Foundry agent or multi-agent architecture;
-- production tenant isolation and paid Search tiers;
+- production tenant isolation and paid Search tiers with Search-managed outbound identity, semantic ranking, and dedicated capacity;
 - continuous live LLM evaluation;
 - Microsoft Entra authentication for end users, which remains a separate M5 delivery.

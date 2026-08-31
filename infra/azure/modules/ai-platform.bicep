@@ -71,9 +71,10 @@ resource searchService 'Microsoft.Search/searchServices@2025-05-01' = {
   sku: {
     name: 'free'
   }
-  identity: {
-    type: 'SystemAssigned'
-  }
+  // The Free tier accepts inbound Entra/RBAC calls, but it cannot use a
+  // Search-managed identity for outbound connections. ContractIQ generates
+  // embeddings in the application and pushes them to Search, so no outbound
+  // identity or integrated vectorizer is required for this portfolio profile.
   properties: {
     disableLocalAuth: true
     hostingMode: 'Default'
@@ -84,7 +85,6 @@ resource searchService 'Microsoft.Search/searchServices@2025-05-01' = {
     partitionCount: 1
     publicNetworkAccess: 'Enabled'
     replicaCount: 1
-    semanticSearch: 'free'
   }
   tags: tags
 }

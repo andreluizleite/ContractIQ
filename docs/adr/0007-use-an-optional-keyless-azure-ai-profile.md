@@ -16,7 +16,8 @@ Add an optional Azure profile behind the existing application ports:
 - Azure AI Search supplies managed BM25 and vector hybrid retrieval;
 - PostgreSQL continues to own structured business data and transactions;
 - the .NET assistant remains the single orchestrator and exposes the existing bounded tools;
-- local development authenticates through Microsoft Entra and `DefaultAzureCredential` rather than stored service keys;
+- the .NET application calls Foundry for embeddings and pushes vectors to Search instead of asking Search to call Foundry;
+- local development authenticates inbound requests through Microsoft Entra, RBAC, and `DefaultAzureCredential` rather than stored service keys;
 - ordinary CI validates code and Bicep offline; live Azure smoke tests require manual dispatch;
 - infrastructure is reproducible with Bicep, isolated in one development resource group, and guarded by a small subscription budget.
 
@@ -27,3 +28,5 @@ The first portfolio environment uses public service endpoints and RBAC. Private 
 The project demonstrates provider substitution, managed hybrid search, keyless cloud access, infrastructure as code, cost controls, and deterministic AI safety boundaries. The local profile remains cloneable and demonstrable without Azure.
 
 Public endpoints are less isolated than a production private network, and a budget alert is not a hard spending cap. Model availability, versions, quotas, prices, and regions must therefore be checked immediately before deployment. The Azure adapters also require explicit integration and live smoke tests while normal tests stay deterministic.
+
+The portfolio environment deliberately uses Search Free. A caller can use Entra RBAC on any Search tier, so the application remains keyless. However, the Free Search service cannot have its own managed identity for outbound connections and does not provide the semantic-ranking, capacity, networking, or reliability features expected from a production tier. Those are documented as a Basic-or-higher evolution rather than provisioned for this demonstration.

@@ -11,7 +11,7 @@ ContractIQ v1 is designed to be evaluated without an Azure subscription and with
 | Fully local assistant | Local retrieval + Ollama `qwen3:4b`       | No external charge                                                      | Approximately 2.5 GB more disk plus local RAM/CPU during generation |
 | Kimi assistant        | Local retrieval + Kimi API                | Consumes the account's provider credits per submitted grounded question | The larger local chat model is not required                         |
 | Local observability   | Any profile + Aspire Dashboard            | No external charge                                                      | Dashboard image, container memory, and temporary telemetry storage  |
-| Planned Azure         | Foundry + free Azure AI Search             | No charge until explicitly provisioned; model inference will consume credit | Infrastructure plan is tracked separately in issue #13          |
+| Planned Azure         | Foundry + free Azure AI Search             | Search Free has no hourly charge; Foundry model inference will consume credit only after a model is deployed and invoked | Infrastructure plan is tracked separately in issue #13          |
 
 Model sizes are approximate and can change when a model image is updated. Docker images, package caches, database records, and generated build artifacts require additional local disk space.
 
@@ -117,6 +117,8 @@ ContractIQ v1 remains locally runnable without Azure credentials or automatic pr
 - cloning, building, testing, and demonstrating v1 creates no Azure resource;
 - no Azure resource group exists until an explicit subscription deployment is approved;
 - Microsoft Foundry and Azure AI Search remain optional adapters, not runtime dependencies;
+- the free Search profile stays keyless for inbound application calls through Entra RBAC, while application-owned code generates and uploads embeddings;
+- Search-managed outbound identity, integrated vectorization, semantic ranking, and dedicated capacity remain a documented Basic-or-higher production evolution;
 - issue #13 records resource assumptions, budgets, keyless authentication, infrastructure as code, and the exact teardown boundary before deployment;
 - the USD 10 budget is an alerting target, not a hard spending cap;
 - model deployment stays out of the foundation template until live region, SKU, version, and quota checks are reviewed.
