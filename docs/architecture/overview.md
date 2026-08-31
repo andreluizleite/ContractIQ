@@ -21,12 +21,13 @@ flowchart TB
     Infrastructure --> Ollama[Ollama embeddings and optional chat]
     Infrastructure -. optional hosted chat .-> Kimi[Kimi API]
     Infrastructure -. optional hosted models .-> Foundry[Microsoft Foundry]
+    Infrastructure -. optional hybrid index .-> Search[Azure AI Search]
     Api -. traces, metrics, logs .-> Dashboard[Local Aspire Dashboard]
 ```
 
-The diagram includes the optional Foundry model adapters delivered after v1.
-Microsoft Entra ID for end users and Azure AI Search remain future adapters. No
-Azure resource or model deployment is required by the local runtime.
+The diagram includes the optional Foundry model and Azure AI Search adapters
+delivered after v1. Microsoft Entra ID for end users remains a future adapter.
+No Azure resource or model deployment is required by the local runtime.
 
 ## Logical boundaries
 
@@ -38,9 +39,9 @@ The current deterministic rules are documented in [Contract cancellation rules](
 
 ### Knowledge
 
-The knowledge module owns document ingestion, versioning, chunking, embeddings, indexing, retrieval, and citations. It never decides whether a contract can be cancelled. Its application ports are provider-neutral; the current local adapters use Ollama for multilingual embeddings and PostgreSQL for lexical and vector retrieval.
+The knowledge module owns document ingestion, versioning, chunking, embeddings, indexing, retrieval, and citations. It never decides whether a contract can be cancelled. Its application ports are provider-neutral; the default local adapters use Ollama for multilingual embeddings and PostgreSQL for lexical and vector retrieval. The optional Azure profile sends the same application-owned chunks and vectors to Azure AI Search.
 
-Customer, contract, and effective-date filters are applied before ranking. PostgreSQL lexical and cosine-similarity candidate lists are fused with Reciprocal Rank Fusion. See [Local knowledge retrieval](../knowledge/local-retrieval.md) for the concrete flow and trade-offs.
+Customer, contract, and effective-date filters are applied before ranking. PostgreSQL lexical and cosine-similarity candidate lists are fused with Reciprocal Rank Fusion. Azure AI Search performs one prefiltered BM25 and HNSW hybrid request and returns its fused score. See [Local knowledge retrieval](../knowledge/local-retrieval.md) and the [Azure AI Search adapter](../azure/azure-ai-search-adapter.md) for the concrete flows and trade-offs.
 
 ### Assistant orchestration
 
@@ -76,8 +77,8 @@ Retrieved document content is untrusted data. Instructions inside a document can
   configured hosted Kimi adapter supplies chat and tool calling.
 - `FoundryModels`: Microsoft Foundry can supply chat, embeddings, or both through
   Entra RBAC while PostgreSQL remains the local retrieval store.
-- `FutureAzureSearch`: Azure AI Search remains planned behind the existing
-  retrieval ports.
+- `AzureAiSearch`: Foundry or Ollama can generate embeddings while Azure AI
+  Search supplies the optional BM25 and vector hybrid index through Entra RBAC.
 
 The default developer experience remains functional without Azure.
 
@@ -86,8 +87,8 @@ The default developer experience remains functional without Azure.
 | Capability             | v1 implementation                     | Planned option                                              |
 | ---------------------- | ------------------------------------- | ----------------------------------------------------------- |
 | Structured persistence | PostgreSQL through EF Core/Npgsql     | No alternative required for the portfolio MVP               |
-| Lexical retrieval      | PostgreSQL full-text search           | Azure AI Search BM25                                        |
-| Vector retrieval       | pgvector cosine similarity            | Azure AI Search vector search                               |
+| Lexical retrieval      | PostgreSQL full-text search           | Implemented optional Azure AI Search BM25                   |
+| Vector retrieval       | pgvector cosine similarity            | Implemented optional Azure AI Search HNSW                   |
 | Embeddings             | Ollama `embeddinggemma`               | Implemented optional Microsoft Foundry embedding deployment |
 | Chat and tool calling  | Ollama `qwen3:4b` or hosted Kimi      | Implemented optional Microsoft Foundry chat deployment      |
 | Identity               | Anonymous local `Development` profile | Microsoft Entra ID                                          |

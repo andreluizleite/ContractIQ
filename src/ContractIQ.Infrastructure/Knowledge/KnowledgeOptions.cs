@@ -65,7 +65,8 @@ public sealed record KnowledgeOptions(
         if (dimensions != StoredEmbeddingDimensions)
         {
             throw new InvalidOperationException(
-                $"The current pgvector schema requires {StoredEmbeddingDimensions}-dimension embeddings.");
+                $"The current knowledge index schema requires " +
+                $"{StoredEmbeddingDimensions}-dimension embeddings.");
         }
 
         var endpointUri = new Uri(endpoint, UriKind.Absolute);

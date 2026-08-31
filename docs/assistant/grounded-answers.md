@@ -3,7 +3,7 @@
 The grounded assistant explains a contract question in English or Brazilian Portuguese by combining two application-owned inputs:
 
 - a deterministic cancellation assessment calculated by the .NET domain model;
-- citation-ready contract and policy evidence retrieved from the local knowledge index.
+- citation-ready contract and policy evidence retrieved from the configured knowledge index.
 
 The language model writes the explanation. It is not the authority for eligibility, dates, chargeable periods, penalty amounts, document scope, or state changes.
 
@@ -13,6 +13,10 @@ The committed default is local Ollama so cloning or starting the repository neve
 creates a hosted-model charge. The assistant chat provider can be changed to Kimi
 or Microsoft Foundry through local configuration. Embeddings can independently
 remain on Ollama or use a Foundry embedding deployment.
+
+Retrieval independently defaults to PostgreSQL full-text search plus pgvector.
+The optional Azure AI Search adapter uses the same application-owned scope and
+citation contract. See [Azure AI Search adapter](../azure/azure-ai-search-adapter.md).
 
 No chat provider is called during application startup or automated tests. A hosted
 request occurs only when a user submits a sufficiently grounded assistant question.
