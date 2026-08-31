@@ -14,6 +14,9 @@ This folder contains the reviewed infrastructure boundary for ContractIQ's optio
 
 No model deployment is declared yet. Model name, version, SKU, capacity, and region must be resolved against the live catalog and subscription quota immediately before a separate approved deployment.
 
+The template outputs `foundryOpenAIEndpoint` in the form expected by the .NET
+chat and embedding adapters: `https://<resource-name>.openai.azure.com/openai/v1/`.
+
 ## Security choices
 
 - Local development uses the signed-in Microsoft Entra identity through `DefaultAzureCredential`.

@@ -1,7 +1,10 @@
+using Azure.Core;
+using Azure.Identity;
 using ContractIQ.Application.Abstractions.Persistence;
 using ContractIQ.Application.Assistant;
 using ContractIQ.Application.Assistant.Tools;
 using ContractIQ.Application.Knowledge;
+using ContractIQ.Infrastructure.AI;
 using ContractIQ.Infrastructure.Assistant;
 using ContractIQ.Infrastructure.Knowledge;
 using ContractIQ.Infrastructure.Persistence;
@@ -39,6 +42,7 @@ public static class DependencyInjection
             connectionString,
             new KnowledgeOptions(
                 "sample-data/knowledge",
+                KnowledgeEmbeddingProvider.Ollama,
                 new Uri("http://localhost:11434"),
                 "embeddinggemma",
                 768),
@@ -97,7 +101,16 @@ public static class DependencyInjection
         services.AddScoped<IKnowledgeIndex, PostgresKnowledgeIndex>();
         services.AddSingleton(knowledgeOptions);
         services.AddSingleton<IKnowledgeDocumentCatalog, FileSystemKnowledgeDocumentCatalog>();
-        services.AddSingleton<IKnowledgeEmbeddingGenerator, OllamaKnowledgeEmbeddingGenerator>();
+        services.AddSingleton<TokenCredential>(_ => new DefaultAzureCredential());
+        services.AddSingleton<FoundryOpenAIClientFactory>();
+        if (knowledgeOptions.EmbeddingProvider == KnowledgeEmbeddingProvider.Foundry)
+        {
+            services.AddSingleton<IKnowledgeEmbeddingGenerator, FoundryKnowledgeEmbeddingGenerator>();
+        }
+        else
+        {
+            services.AddSingleton<IKnowledgeEmbeddingGenerator, OllamaKnowledgeEmbeddingGenerator>();
+        }
         services.AddSingleton(assistantOptions);
         services.AddSingleton<IAssistantToolAudit, LoggingAssistantToolAudit>();
         services.AddScoped<IAssistantWriteTransaction, EfAssistantWriteTransaction>();

@@ -16,7 +16,7 @@ The React experience then shows **Action prepared by the agent**. Selecting **Re
 
 ## Tools available to the model
 
-The provider adapter uses Microsoft `IChatClient`, `AIFunctionFactory`, and `FunctionInvokingChatClient` with either local Ollama or hosted Kimi to expose four functions:
+The provider adapter uses Microsoft `IChatClient`, `AIFunctionFactory`, and `FunctionInvokingChatClient` with local Ollama, hosted Kimi, or Microsoft Foundry to expose four functions:
 
 | Tool | Capability | Changes state |
 | --- | --- | --- |

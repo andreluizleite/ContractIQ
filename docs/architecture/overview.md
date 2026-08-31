@@ -20,12 +20,13 @@ flowchart TB
     Infrastructure --> PostgreSQL[(PostgreSQL and pgvector)]
     Infrastructure --> Ollama[Ollama embeddings and optional chat]
     Infrastructure -. optional hosted chat .-> Kimi[Kimi API]
+    Infrastructure -. optional hosted models .-> Foundry[Microsoft Foundry]
     Api -. traces, metrics, logs .-> Dashboard[Local Aspire Dashboard]
 ```
 
-The diagram shows implemented v1 components. Microsoft Entra ID, Microsoft
-Foundry, and Azure AI Search are tracked future adapters, not runtime dependencies
-or provisioned resources in this release.
+The diagram includes the optional Foundry model adapters delivered after v1.
+Microsoft Entra ID for end users and Azure AI Search remain future adapters. No
+Azure resource or model deployment is required by the local runtime.
 
 ## Logical boundaries
 
@@ -45,7 +46,7 @@ Customer, contract, and effective-date filters are applied before ranking. Postg
 
 Assistant orchestration is an application concern rather than a separate service. The current read-only flow validates customer and contract scope, calculates the deterministic cancellation assessment, retrieves supporting evidence, refuses when no applicable contract clause is available, and asks a provider-neutral answer generator for a bilingual explanation.
 
-The provider adapter uses Microsoft's `IChatClient` through either local Ollama or the OpenAI-compatible Kimi API. The committed default remains local and hosted usage is explicitly enabled with secret configuration. Citations are assembled by the application from retrieved metadata rather than invented by the model. `FunctionInvokingChatClient` exposes scoped read and preparation tools; the write tool remains outside automatic invocation and requires a separate confirmed HTTP request.
+The provider adapter uses Microsoft's `IChatClient` through local Ollama, the OpenAI-compatible Kimi API, or the OpenAI-compatible Microsoft Foundry endpoint. The committed default remains local and hosted usage is explicitly enabled through configuration. Foundry authenticates with `DefaultAzureCredential`; Kimi retains its local API-key boundary. Citations are assembled by the application from retrieved metadata rather than invented by the model. `FunctionInvokingChatClient` exposes scoped read and preparation tools; the write tool remains outside automatic invocation and requires a separate confirmed HTTP request.
 
 ## Dependency rule
 
@@ -73,8 +74,10 @@ Retrieved document content is untrusted data. Instructions inside a document can
   external token charge.
 - `KimiChat`: Ollama continues to supply local embeddings while the explicitly
   configured hosted Kimi adapter supplies chat and tool calling.
-- `FutureAzure`: Microsoft Foundry and Azure AI Search remain planned behind the
-  existing application ports and are not implemented in v1.
+- `FoundryModels`: Microsoft Foundry can supply chat, embeddings, or both through
+  Entra RBAC while PostgreSQL remains the local retrieval store.
+- `FutureAzureSearch`: Azure AI Search remains planned behind the existing
+  retrieval ports.
 
 The default developer experience remains functional without Azure.
 
@@ -85,8 +88,8 @@ The default developer experience remains functional without Azure.
 | Structured persistence | PostgreSQL through EF Core/Npgsql     | No alternative required for the portfolio MVP               |
 | Lexical retrieval      | PostgreSQL full-text search           | Azure AI Search BM25                                        |
 | Vector retrieval       | pgvector cosine similarity            | Azure AI Search vector search                               |
-| Embeddings             | Ollama `embeddinggemma`               | Microsoft Foundry embedding deployment                      |
-| Chat and tool calling  | Ollama `qwen3:4b` or hosted Kimi      | Microsoft Foundry chat deployment                           |
+| Embeddings             | Ollama `embeddinggemma`               | Implemented optional Microsoft Foundry embedding deployment |
+| Chat and tool calling  | Ollama `qwen3:4b` or hosted Kimi      | Implemented optional Microsoft Foundry chat deployment      |
 | Identity               | Anonymous local `Development` profile | Microsoft Entra ID                                          |
 | Telemetry backend      | Optional local Aspire Dashboard       | Azure Monitor/Application Insights after a hosting decision |
 
