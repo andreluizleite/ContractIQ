@@ -12,9 +12,11 @@ public enum KnowledgeIndexProvider
 public sealed partial record KnowledgeIndexOptions(
     KnowledgeIndexProvider Provider,
     Uri? AzureSearchEndpoint,
-    string AzureSearchIndexName)
+    string AzureSearchIndexName,
+    int MaximumRetries = 3)
 {
     public const string DefaultAzureSearchIndexName = "contractiq-knowledge-v1";
+    public const int DefaultMaximumRetries = 3;
 
     public static KnowledgeIndexOptions Local =>
         new(KnowledgeIndexProvider.PostgreSql, null, DefaultAzureSearchIndexName);
@@ -43,6 +45,8 @@ public sealed partial record KnowledgeIndexOptions(
             "Azure AI Search is selected, but no endpoint is configured.");
         string indexName = configuration["AzureSearch:IndexName"]?.Trim()
             ?? DefaultAzureSearchIndexName;
+        int maximumRetries = ParseMaximumRetries(
+            configuration["AzureSearch:MaximumRetries"]);
         var endpointUri = new Uri(endpoint, UriKind.Absolute);
 
         if (endpointUri.Scheme != Uri.UriSchemeHttps)
@@ -58,7 +62,28 @@ public sealed partial record KnowledgeIndexOptions(
                 "digits, hyphens, or underscores and start and end with a letter or digit.");
         }
 
-        return new KnowledgeIndexOptions(provider, endpointUri, indexName);
+        return new KnowledgeIndexOptions(
+            provider,
+            endpointUri,
+            indexName,
+            maximumRetries);
+    }
+
+    private static int ParseMaximumRetries(string? value)
+    {
+        int maximumRetries = string.IsNullOrWhiteSpace(value)
+            ? DefaultMaximumRetries
+            : int.TryParse(value, out int configuredRetries)
+                ? configuredRetries
+                : -1;
+
+        if (maximumRetries is < 0 or > 5)
+        {
+            throw new InvalidOperationException(
+                "Azure AI Search maximum retries must be an integer between 0 and 5.");
+        }
+
+        return maximumRetries;
     }
 
     private static string GetRequiredSetting(

@@ -123,4 +123,12 @@ ContractIQ v1 remains locally runnable without Azure credentials or automatic pr
 - the USD 10 budget is an alerting target, not a hard spending cap;
 - model deployment stays out of the foundation template until live region, SKU, version, and quota checks are reviewed.
 
+The optional Azure smoke workflow also remains inert until a person selects the
+`azure-dev` environment in GitHub Actions. One run makes one Foundry embedding
+request with two short fictional inputs, writes one Search chunk, and performs
+one hybrid query. SDK retries are disabled, concurrent runs are serialized, and
+the resulting count/duration report is retained for seven days. See the
+[manual keyless smoke-test guide](../azure/manual-smoke-test.md) for setup,
+execution, and revocation.
+
 This boundary prevents a documentation example from accidentally creating a chargeable cloud resource.

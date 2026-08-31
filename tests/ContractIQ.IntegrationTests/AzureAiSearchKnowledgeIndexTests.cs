@@ -76,6 +76,14 @@ public sealed class AzureAiSearchKnowledgeIndexTests
     }
 
     [Fact]
+    public void Configures_zero_sdk_retries_for_a_bounded_smoke_test()
+    {
+        SearchClientOptions options = AzureSearchGateway.CreateClientOptions(0);
+
+        Assert.Equal(0, options.Retry.MaxRetries);
+    }
+
+    [Fact]
     public async Task Replacing_the_same_version_keeps_stable_chunk_keys_and_state()
     {
         var gateway = new InMemoryAzureSearchGateway();

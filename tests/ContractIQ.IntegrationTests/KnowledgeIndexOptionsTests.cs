@@ -32,6 +32,7 @@ public sealed class KnowledgeIndexOptionsTests
                 ["AzureSearch:Endpoint"] =
                     "https://srch-contractiq-dev.example.search.windows.net",
                 ["AzureSearch:IndexName"] = "contractiq-knowledge-v1",
+                ["AzureSearch:MaximumRetries"] = "0",
             });
 
         KnowledgeIndexOptions options = KnowledgeIndexOptions.FromConfiguration(configuration);
@@ -41,6 +42,26 @@ public sealed class KnowledgeIndexOptionsTests
             new Uri("https://srch-contractiq-dev.example.search.windows.net"),
             options.AzureSearchEndpoint);
         Assert.Equal("contractiq-knowledge-v1", options.AzureSearchIndexName);
+        Assert.Equal(0, options.MaximumRetries);
+    }
+
+    [Theory]
+    [InlineData("-1")]
+    [InlineData("6")]
+    [InlineData("many")]
+    public void Rejects_unbounded_or_invalid_retry_configuration(string retries)
+    {
+        IConfiguration configuration = BuildConfiguration(
+            new Dictionary<string, string?>
+            {
+                ["Knowledge:IndexProvider"] = "AzureAiSearch",
+                ["AzureSearch:Endpoint"] =
+                    "https://srch-contractiq-dev.example.search.windows.net",
+                ["AzureSearch:MaximumRetries"] = retries,
+            });
+
+        Assert.Throws<InvalidOperationException>(
+            () => KnowledgeIndexOptions.FromConfiguration(configuration));
     }
 
     [Fact]

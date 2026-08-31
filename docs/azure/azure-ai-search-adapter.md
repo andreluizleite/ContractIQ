@@ -86,6 +86,10 @@ dotnet user-secrets set "AzureSearch:Endpoint" "https://<search-name>.search.win
 dotnet user-secrets set "AzureSearch:IndexName" "contractiq-knowledge-v1" --project src/ContractIQ.Api
 ```
 
+Normal runtime defaults to three transient Search SDK retries. The bounded
+manual smoke workflow sets `AzureSearch:MaximumRetries` to `0`; accepted values
+are zero through five.
+
 The document indexer is a separate process. Configure its current PowerShell
 session without saving a key:
 

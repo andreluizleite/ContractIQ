@@ -27,11 +27,13 @@ internal sealed class AzureSearchGateway : IAzureSearchGateway, IDisposable
         Uri endpoint = options.AzureSearchEndpoint
             ?? throw new InvalidOperationException(
                 "Azure AI Search endpoint is required by the selected index provider.");
-        _indexClient = new SearchIndexClient(endpoint, credential);
+        SearchClientOptions clientOptions = CreateClientOptions(options.MaximumRetries);
+        _indexClient = new SearchIndexClient(endpoint, credential, clientOptions);
         _searchClient = new SearchClient(
             endpoint,
             options.AzureSearchIndexName,
-            credential);
+            credential,
+            CreateClientOptions(options.MaximumRetries));
     }
 
     public async Task<bool> IsCurrentAsync(
@@ -151,6 +153,13 @@ internal sealed class AzureSearchGateway : IAzureSearchGateway, IDisposable
             new VectorSearchProfile(VectorProfileName, VectorAlgorithmName));
 
         return index;
+    }
+
+    internal static SearchClientOptions CreateClientOptions(int maximumRetries)
+    {
+        var options = new SearchClientOptions();
+        options.Retry.MaxRetries = maximumRetries;
+        return options;
     }
 
     internal static SearchOptions CreateHybridSearchOptions(

@@ -10,7 +10,7 @@ This folder contains the reviewed infrastructure boundary for ContractIQ's optio
 | Subscription budget | USD 10 planning target with 50%, 80%, and 100% alerts | No charge; alerts do not stop spend |
 | Microsoft Foundry account and project | `AIServices`, public development endpoint, local authentication disabled | Account/project have no committed throughput; model inference is usage-based |
 | Azure AI Search | Free tier, one shared service with a 50 MB limit | No charge while the free tier remains available and its limits are respected |
-| Role assignments | Least-privilege roles for the local developer | No charge |
+| Role assignments | Least-privilege roles for the local developer and optional GitHub OIDC service principal | No charge |
 
 No model deployment is declared yet. Model name, version, SKU, capacity, and region must be resolved against the live catalog and subscription quota immediately before a separate approved deployment.
 
@@ -26,6 +26,7 @@ chat and embedding adapters: `https://<resource-name>.openai.azure.com/openai/v1
 - A production evolution can select Basic to add a Search-managed identity, integrated vectorization, semantic ranking, dedicated capacity, and stronger operational guarantees.
 - Public endpoints keep this portfolio environment small. Private endpoints, a VNet, and Key Vault would add cost and operational complexity without improving the local-only demo enough to justify them.
 - Only fictional sample contracts and policies may be indexed or sent to a hosted model.
+- The optional `smokeTestPrincipalId` receives only Foundry inference plus Search schema/data roles on the individual resources. GitHub exchanges OIDC claims for a short-lived Azure token; no client secret is stored.
 
 ## Validate without deploying
 
@@ -49,6 +50,8 @@ Before anyone runs a subscription deployment, record all of the following in the
 6. The budget email, budget start date, and USD 10 amount.
 7. The exact `what-if` output.
 8. Explicit approval to provision.
+
+After provisioning and model deployment are separately approved, follow the [manual keyless smoke-test guide](../../docs/azure/manual-smoke-test.md). The live workflow is never triggered by a push or pull request and performs only one bounded indexing/query scenario.
 
 ## Teardown boundary
 
