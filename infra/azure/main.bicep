@@ -104,5 +104,6 @@ output resourceGroupName string = resourceGroup.name
 output foundryAccountName string = aiPlatform.outputs.foundryAccountName
 output foundryProjectName string = aiPlatform.outputs.foundryProjectName
 output foundryEndpoint string = aiPlatform.outputs.foundryEndpoint
+output foundryOpenAIEndpoint string = aiPlatform.outputs.foundryOpenAIEndpoint
 output searchServiceName string = aiPlatform.outputs.searchServiceName
 output searchEndpoint string = aiPlatform.outputs.searchEndpoint

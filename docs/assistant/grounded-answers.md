@@ -11,12 +11,17 @@ The language model writes the explanation. It is not the authority for eligibili
 
 The committed default is local Ollama so cloning or starting the repository never
 creates a hosted-model charge. The assistant chat provider can be changed to Kimi
-through local configuration. Retrieval embeddings remain local through
-`embeddinggemma` in both modes, so changing the chat provider does not require
-reindexing documents.
+or Microsoft Foundry through local configuration. Embeddings can independently
+remain on Ollama or use a Foundry embedding deployment.
 
 No chat provider is called during application startup or automated tests. A hosted
 request occurs only when a user submits a sufficiently grounded assistant question.
+
+When Foundry is selected, the same fictional question, assessment, bounded
+evidence, and tool schemas are sent to the configured Azure resource. Access is
+keyless through `DefaultAzureCredential` and Entra RBAC. See
+[Microsoft Foundry model adapters](../azure/foundry-model-adapters.md) for the
+configuration and cost boundary.
 
 When Kimi is selected, the question, deterministic assessment, bounded excerpts
 from the fictional contract and policies, tool schemas, and requested read-tool
@@ -129,7 +134,7 @@ Run scoped hybrid knowledge retrieval
 build safe prompt     localized refusal
           |
           v
-IChatClient -> Ollama qwen3:4b or hosted Kimi
+IChatClient -> Ollama, hosted Kimi, or Microsoft Foundry
           |
           v
 answer + application-owned citations + assessment
@@ -184,6 +189,6 @@ These measures reduce prompt-injection risk but do not make model output authori
 
 ## Provider boundary
 
-The Application project depends on `IAssistantAnswerGenerator`. Infrastructure implements it behind Microsoft's `IChatClient` abstraction with either OllamaSharp or an OpenAI-compatible Kimi client. This keeps orchestration and tests independent from the provider and allows a later Microsoft Foundry adapter without moving domain authority into the model integration.
+The Application project depends on `IAssistantAnswerGenerator`. Infrastructure implements it behind Microsoft's `IChatClient` abstraction with OllamaSharp, an OpenAI-compatible Kimi client, or a keyless Microsoft Foundry client. Embeddings use the same provider-neutral approach. This keeps orchestration and tests independent from the provider without moving domain authority into model integration.
 
 The same assistant can now prepare a cancellation action through safe tool calling. See [Safe assistant tool calling](safe-tool-calling.md) for the human-confirmation and write boundary.

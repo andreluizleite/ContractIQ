@@ -35,14 +35,18 @@ ContractIQ does not deploy a second hosted agent in Foundry for this increment. 
 
 ## Delivery slices
 
-### 1. Azure foundation
+Status on 2026-08-31: the Azure foundation definitions and Foundry model
+adapters are implemented and validated without provisioning resources. The
+Azure AI Search adapter is the next delivery slice.
+
+### 1. Azure foundation — implemented, not deployed
 
 - validate the subscription, ownership, quota, and provider availability;
 - review Bicep with a subscription budget, one resource group, a Foundry account/project, free Azure AI Search, and RBAC;
 - run `what-if` and stop for explicit provisioning approval;
 - provision no model until its live SKU and quota are verified.
 
-### 2. Foundry adapters
+### 2. Foundry adapters — implemented, not invoked live
 
 - add a `Foundry` assistant provider without changing the local default;
 - authenticate with `DefaultAzureCredential` and the developer's Azure CLI session;

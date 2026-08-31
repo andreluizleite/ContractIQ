@@ -70,6 +70,62 @@ public sealed class AssistantOptionsTests
     }
 
     [Fact]
+    public void Configures_foundry_with_keyless_deployment_settings()
+    {
+        IConfiguration configuration = BuildConfiguration(
+            new Dictionary<string, string?>
+            {
+                ["Assistant:Provider"] = "Foundry",
+                ["Foundry:OpenAIEndpoint"] =
+                    "https://aif-contractiq-dev.example/openai/v1/",
+                ["Foundry:ChatDeployment"] = "contractiq-chat",
+            });
+
+        AssistantOptions options = AssistantOptions.FromConfiguration(configuration);
+
+        Assert.Equal(AssistantProvider.Foundry, options.Provider);
+        Assert.Equal(
+            new Uri("https://aif-contractiq-dev.example/openai/v1/"),
+            options.Endpoint);
+        Assert.Equal("contractiq-chat", options.ChatModel);
+        Assert.Null(options.ApiKey);
+    }
+
+    [Fact]
+    public void Rejects_foundry_without_a_chat_deployment()
+    {
+        IConfiguration configuration = BuildConfiguration(
+            new Dictionary<string, string?>
+            {
+                ["Assistant:Provider"] = "Foundry",
+                ["Foundry:OpenAIEndpoint"] =
+                    "https://aif-contractiq-dev.example/openai/v1/",
+            });
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => AssistantOptions.FromConfiguration(configuration));
+
+        Assert.Contains("chat deployment", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Rejects_foundry_without_the_openai_v1_endpoint()
+    {
+        IConfiguration configuration = BuildConfiguration(
+            new Dictionary<string, string?>
+            {
+                ["Assistant:Provider"] = "Foundry",
+                ["Foundry:OpenAIEndpoint"] = "https://aif-contractiq-dev.example/",
+                ["Foundry:ChatDeployment"] = "contractiq-chat",
+            });
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => AssistantOptions.FromConfiguration(configuration));
+
+        Assert.Contains("/openai/v1/", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Rejects_an_unknown_provider()
     {
         IConfiguration configuration = BuildConfiguration(

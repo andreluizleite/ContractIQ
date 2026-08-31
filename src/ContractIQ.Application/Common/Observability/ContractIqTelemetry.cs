@@ -54,6 +54,13 @@ public static class ContractIqTelemetry
         "contractiq.ai.model.tokens",
         unit: "{token}",
         description: "Token usage reported by the configured model provider.");
+    private static readonly Counter<long> EmbeddingRequests = Meter.CreateCounter<long>(
+        "contractiq.ai.embedding.requests",
+        description: "Number of embedding-provider requests.");
+    private static readonly Histogram<double> EmbeddingRequestDuration = Meter.CreateHistogram<double>(
+        "contractiq.ai.embedding.request.duration",
+        unit: "s",
+        description: "Embedding-provider request duration.");
 
     private static readonly Counter<long> ToolCalls = Meter.CreateCounter<long>(
         "contractiq.assistant.tool.calls",
@@ -143,6 +150,24 @@ public static class ContractIqTelemetry
         };
 
         ToolCalls.Add(1, tags);
+    }
+
+    public static void RecordEmbeddingRequest(
+        string provider,
+        string model,
+        string outcome,
+        TimeSpan duration)
+    {
+        var tags = new TagList
+        {
+            { "gen_ai.operation.name", "embeddings" },
+            { "gen_ai.provider.name", provider },
+            { "gen_ai.request.model", model },
+            { "contractiq.outcome", outcome },
+        };
+
+        EmbeddingRequests.Add(1, tags);
+        EmbeddingRequestDuration.Record(duration.TotalSeconds, tags);
     }
 
     public static void RecordCancellationCommand(

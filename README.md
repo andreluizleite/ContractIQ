@@ -27,7 +27,7 @@ The model does not calculate penalties, authorize users, write to the database, 
 - .NET 10, ASP.NET Core, C#, DDD, Clean Architecture principles, CQRS, EF Core, PostgreSQL, and pgvector;
 - React 19 and TypeScript with an accessible, responsive English and Brazilian Portuguese workspace;
 - local RAG with document versioning, scoped lexical and vector retrieval, Reciprocal Rank Fusion, and application-owned citations;
-- provider-neutral chat and tool calling through `Microsoft.Extensions.AI`, using local Ollama or optional hosted Kimi;
+- provider-neutral chat, embeddings, and tool calling through `Microsoft.Extensions.AI`, using local Ollama, optional hosted Kimi, or keyless Microsoft Foundry;
 - explicit human confirmation, idempotency, transactions, and domain revalidation for AI-prepared writes;
 - OpenTelemetry traces, metrics, and structured logs with an optional local Aspire Dashboard;
 - automated domain, application, integration, frontend, security, and deterministic AI evaluation gates;
@@ -45,6 +45,7 @@ flowchart LR
     Ports --> Db[(PostgreSQL<br/>structured data + pgvector)]
     Ports --> Ollama[Ollama<br/>local embeddings and optional chat]
     Ports -. optional hosted chat .-> Kimi[Kimi API]
+    Ports -. optional hosted models .-> Foundry[Microsoft Foundry]
     Api -. OpenTelemetry .-> Aspire[Local Aspire Dashboard]
 ```
 
@@ -97,7 +98,7 @@ npm run dev
 
 Open `http://localhost:5173`. The API applies committed migrations and idempotently seeds ACME, Globex, and Initech. Customer navigation, structured contract details, deterministic cancellation assessments, and confirmed cancellation requests work with PostgreSQL alone.
 
-To enable cited RAG answers, index the fictional documents with local embeddings and choose either local Ollama chat or optional Kimi. Follow the [grounded assistant setup](docs/assistant/grounded-answers.md) rather than adding credentials to source files.
+To enable cited RAG answers, index the fictional documents and choose local Ollama, optional Kimi chat, or the optional keyless Foundry model adapters. Follow the [grounded assistant setup](docs/assistant/grounded-answers.md) rather than adding credentials to source files.
 
 ## Five-minute demonstration
 
@@ -130,7 +131,7 @@ The required GitHub Actions workflow restores locked dependencies, audits NuGet 
 
 Current release-candidate coverage includes:
 
-- 134 backend tests across domain, application, integration, and AI evaluation projects;
+- 144 backend tests across domain, application, integration, and AI evaluation projects;
 - 15 React component and workflow tests;
 - 12 deterministic AI safety scenarios covering grounding, citation integrity, bilingual behavior, refusal, and tool routing.
 
@@ -159,7 +160,7 @@ npm run build
 | Fully local assistant | None                                                            | Adds approximately 2.5 GB for `qwen3:4b` and local CPU/RAM usage |
 | Kimi assistant        | Provider API credits only when a grounded question is submitted | Local PostgreSQL and embeddings remain required                  |
 | Aspire observability  | None                                                            | Optional local container and telemetry storage                   |
-| Microsoft Azure       | None in v1; no Azure resources are created                      | Optional adapters remain roadmap work                            |
+| Microsoft Foundry     | No cost until explicitly provisioned and invoked; inference consumes Azure credit | Local application and PostgreSQL can remain running on the developer machine |
 
 See [cost and resource management](docs/operations/cost-and-resources.md) for startup, storage, cleanup, credential removal, and the future Azure boundary.
 
@@ -169,7 +170,7 @@ See [cost and resource management](docs/operations/cost-and-resources.md) for st
 src/
   ContractIQ.Domain/          Business rules and aggregates
   ContractIQ.Application/     CQRS use cases, ports, RAG and assistant orchestration
-  ContractIQ.Infrastructure/  EF Core, PostgreSQL, Ollama and Kimi adapters
+  ContractIQ.Infrastructure/  EF Core, PostgreSQL, Ollama, Kimi and Foundry adapters
   ContractIQ.Api/             HTTP composition root, security and telemetry
   ContractIQ.Web/             React and TypeScript product workspace
 tests/                        Domain, application, integration and AI evaluations
@@ -193,6 +194,7 @@ docs/                         Architecture, decisions, operations and demo mater
 - [Bilingual interview guide](docs/demo/interview-guide.md)
 - [Cost and resource management](docs/operations/cost-and-resources.md)
 - [Optional Azure AI implementation plan](docs/azure/implementation-plan.md)
+- [Microsoft Foundry model adapters](docs/azure/foundry-model-adapters.md)
 - [Azure infrastructure validation](infra/azure/README.md)
 - [v1.0.0 release checklist](docs/release/v1.0.0-checklist.md)
 - [Architecture Decision Records](docs/adr)
@@ -200,6 +202,6 @@ docs/                         Architecture, decisions, operations and demo mater
 
 ## Project status
 
-The local portfolio MVP is feature-complete and validated for the first `v1.0.0` release. The optional Microsoft Foundry and Azure AI Search profile is now being delivered incrementally, beginning with non-deploying infrastructure validation and cost controls. Microsoft Entra ID for end users remains a separate post-MVP item. None of these services is required to run or evaluate the local version.
+The local portfolio MVP is feature-complete and validated for the first `v1.0.0` release. The optional Microsoft Foundry model adapters and non-deploying Azure infrastructure foundation are implemented incrementally; Azure AI Search and Microsoft Entra ID for end users remain separate post-MVP items. None of these services is required to run or evaluate the local version.
 
 ContractIQ uses fictional companies, contracts, policies, and rules. It is a software engineering demonstration and does not provide legal advice.

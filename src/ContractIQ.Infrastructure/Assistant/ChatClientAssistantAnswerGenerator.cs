@@ -1,9 +1,11 @@
 using System.ClientModel;
 using System.Diagnostics;
+using Azure.Identity;
 using ContractIQ.Application.Assistant;
 using ContractIQ.Application.Assistant.Tools;
 using ContractIQ.Application.Common.Exceptions;
 using ContractIQ.Application.Common.Observability;
+using ContractIQ.Infrastructure.AI;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
 using OllamaSharp.Models.Exceptions;
@@ -13,8 +15,8 @@ using OpenAIChatCompletionOptions = OpenAI.Chat.ChatCompletionOptions;
 namespace ContractIQ.Infrastructure.Assistant;
 
 /// <summary>
-/// Exposes the same application-owned tools to either a local Ollama model or
-/// the hosted Kimi API. Business decisions and writes remain in the application.
+/// Exposes the same application-owned tools to local Ollama, hosted Kimi, or
+/// Microsoft Foundry. Business decisions and writes remain in the application.
 /// </summary>
 internal sealed class ChatClientAssistantAnswerGenerator : IAssistantAnswerGenerator, IDisposable
 {
@@ -24,11 +26,13 @@ internal sealed class ChatClientAssistantAnswerGenerator : IAssistantAnswerGener
 
     public ChatClientAssistantAnswerGenerator(
         AssistantOptions options,
-        ContractAssistantReadTools readTools)
+        ContractAssistantReadTools readTools,
+        FoundryOpenAIClientFactory foundryClientFactory)
     {
         _options = options;
         _readTools = readTools;
-        _chatClient = new FunctionInvokingChatClient(CreateProviderClient(options))
+        _chatClient = new FunctionInvokingChatClient(
+            CreateProviderClient(options, foundryClientFactory))
         {
             AllowConcurrentInvocation = false,
             IncludeDetailedErrors = false,
@@ -144,7 +148,11 @@ internal sealed class ChatClientAssistantAnswerGenerator : IAssistantAnswerGener
             throw CreateUnavailableException(exception);
         }
         catch (Exception exception) when (
-            exception is HttpRequestException or OllamaException or ClientResultException)
+            exception is HttpRequestException or
+                OllamaException or
+                ClientResultException or
+                AuthenticationFailedException or
+                CredentialUnavailableException)
         {
             RecordFailure(activity, provider, "unavailable", exception, startedAt);
             throw CreateUnavailableException(exception);
@@ -158,8 +166,18 @@ internal sealed class ChatClientAssistantAnswerGenerator : IAssistantAnswerGener
 
     public void Dispose() => _chatClient.Dispose();
 
-    private static IChatClient CreateProviderClient(AssistantOptions options)
+    private static IChatClient CreateProviderClient(
+        AssistantOptions options,
+        FoundryOpenAIClientFactory foundryClientFactory)
     {
+        if (options.Provider == AssistantProvider.Foundry)
+        {
+            return foundryClientFactory
+                .Create(options.Endpoint)
+                .GetChatClient(options.ChatModel)
+                .AsIChatClient();
+        }
+
         if (options.Provider == AssistantProvider.Kimi)
         {
             var clientOptions = new OpenAIClientOptions
@@ -192,12 +210,21 @@ internal sealed class ChatClientAssistantAnswerGenerator : IAssistantAnswerGener
     private ExternalDependencyUnavailableException CreateUnavailableException(
         Exception exception)
     {
-        string dependency = _options.Provider == AssistantProvider.Kimi
-            ? "kimi"
-            : "ollama";
-        string message = _options.Provider == AssistantProvider.Kimi
-            ? $"Kimi is unavailable or model '{_options.ChatModel}' cannot be accessed."
-            : $"Ollama is unavailable or chat model '{_options.ChatModel}' is not installed.";
+        string dependency = _options.Provider switch
+        {
+            AssistantProvider.Foundry => "foundry",
+            AssistantProvider.Kimi => "kimi",
+            _ => "ollama",
+        };
+        string message = _options.Provider switch
+        {
+            AssistantProvider.Foundry =>
+                $"Microsoft Foundry is unavailable or chat deployment '{_options.ChatModel}' cannot be accessed.",
+            AssistantProvider.Kimi =>
+                $"Kimi is unavailable or model '{_options.ChatModel}' cannot be accessed.",
+            _ =>
+                $"Ollama is unavailable or chat model '{_options.ChatModel}' is not installed.",
+        };
 
         return new ExternalDependencyUnavailableException(dependency, message, exception);
     }

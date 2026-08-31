@@ -122,5 +122,6 @@ resource searchDataRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = i
 output foundryAccountName string = foundryAccount.name
 output foundryProjectName string = foundryProject.name
 output foundryEndpoint string = foundryAccount.properties.endpoint
+output foundryOpenAIEndpoint string = 'https://${foundryAccount.name}.openai.azure.com/openai/v1/'
 output searchServiceName string = searchService.name
 output searchEndpoint string = 'https://${searchService.name}.search.windows.net'
