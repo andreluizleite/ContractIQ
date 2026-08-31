@@ -27,7 +27,8 @@ The Azure profile implements existing application ports:
 
 - `IAssistantAnswerGenerator` gets a Foundry-backed `IChatClient` adapter;
 - `IKnowledgeEmbeddingGenerator` gets a Foundry embedding adapter;
-- `IKnowledgeIndex` and `IKnowledgeSearch` get Azure AI Search adapters.
+- `IKnowledgeIndex` gets an Azure AI Search adapter while the application-owned
+  `SearchKnowledgeHandler` continues to implement `IKnowledgeSearch`.
 
 The domain remains unchanged. Cancellation eligibility, penalty calculation, validation, idempotency, state changes, and transactions remain in .NET and PostgreSQL. The model may choose a bounded tool, but it cannot directly write business state.
 
@@ -35,9 +36,9 @@ ContractIQ does not deploy a second hosted agent in Foundry for this increment. 
 
 ## Delivery slices
 
-Status on 2026-08-31: the Azure foundation definitions and Foundry model
-adapters are implemented and validated without provisioning resources. The
-Azure AI Search adapter is the next delivery slice.
+Status on 2026-08-31: the Azure foundation definitions, Foundry model adapters,
+and Azure AI Search adapter are implemented and validated without provisioning
+resources. Manual keyless smoke testing is the next delivery slice.
 
 ### 1. Azure foundation — implemented, not deployed
 
@@ -54,7 +55,7 @@ Azure AI Search adapter is the next delivery slice.
 - translate external failures to the existing safe application exceptions;
 - record dependency duration and result without prompt or document bodies.
 
-### 3. Azure AI Search adapters
+### 3. Azure AI Search adapters — implemented, not invoked live
 
 - define a versioned index schema for document identity, scope, version, chunk text, citation metadata, and vectors;
 - generate embeddings through the application-owned Foundry adapter and push vectors to Search;

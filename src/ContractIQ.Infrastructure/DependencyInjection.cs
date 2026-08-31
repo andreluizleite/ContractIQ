@@ -7,6 +7,7 @@ using ContractIQ.Application.Knowledge;
 using ContractIQ.Infrastructure.AI;
 using ContractIQ.Infrastructure.Assistant;
 using ContractIQ.Infrastructure.Knowledge;
+using ContractIQ.Infrastructure.Knowledge.AzureSearch;
 using ContractIQ.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -30,8 +31,14 @@ public static class DependencyInjection
                 $"Connection string '{ConnectionStringName}' is not configured.");
 
         KnowledgeOptions knowledgeOptions = KnowledgeOptions.FromConfiguration(configuration);
+        KnowledgeIndexOptions knowledgeIndexOptions =
+            KnowledgeIndexOptions.FromConfiguration(configuration);
         AssistantOptions assistantOptions = AssistantOptions.FromConfiguration(configuration);
-        return services.AddInfrastructure(connectionString, knowledgeOptions, assistantOptions);
+        return services.AddInfrastructure(
+            connectionString,
+            knowledgeOptions,
+            assistantOptions,
+            knowledgeIndexOptions);
     }
 
     public static IServiceCollection AddInfrastructure(
@@ -52,7 +59,8 @@ public static class DependencyInjection
                 "qwen3:4b",
                 null,
                 600,
-                0.1f));
+                0.1f),
+            KnowledgeIndexOptions.Local);
     }
 
     public static IServiceCollection AddInfrastructure(
@@ -69,17 +77,20 @@ public static class DependencyInjection
                 "qwen3:4b",
                 null,
                 600,
-                0.1f));
+                0.1f),
+            KnowledgeIndexOptions.Local);
     }
 
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         string connectionString,
         KnowledgeOptions knowledgeOptions,
-        AssistantOptions assistantOptions)
+        AssistantOptions assistantOptions,
+        KnowledgeIndexOptions? knowledgeIndexOptions = null)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+        knowledgeIndexOptions ??= KnowledgeIndexOptions.Local;
 
         services.AddDbContext<ContractIqDbContext>(options =>
             options.UseNpgsql(
@@ -98,10 +109,19 @@ public static class DependencyInjection
         services.AddScoped<ICustomerRepository, PostgresCustomerRepository>();
         services.AddScoped<IContractRepository, PostgresContractRepository>();
         services.AddScoped<ICancellationRequestStore, PostgresCancellationRequestStore>();
-        services.AddScoped<IKnowledgeIndex, PostgresKnowledgeIndex>();
         services.AddSingleton(knowledgeOptions);
+        services.AddSingleton(knowledgeIndexOptions);
         services.AddSingleton<IKnowledgeDocumentCatalog, FileSystemKnowledgeDocumentCatalog>();
         services.AddSingleton<TokenCredential>(_ => new DefaultAzureCredential());
+        if (knowledgeIndexOptions.Provider == KnowledgeIndexProvider.AzureAiSearch)
+        {
+            services.AddSingleton<IAzureSearchGateway, AzureSearchGateway>();
+            services.AddScoped<IKnowledgeIndex, AzureAiSearchKnowledgeIndex>();
+        }
+        else
+        {
+            services.AddScoped<IKnowledgeIndex, PostgresKnowledgeIndex>();
+        }
         services.AddSingleton<FoundryOpenAIClientFactory>();
         if (knowledgeOptions.EmbeddingProvider == KnowledgeEmbeddingProvider.Foundry)
         {

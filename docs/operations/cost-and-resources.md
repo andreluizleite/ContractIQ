@@ -116,7 +116,7 @@ ContractIQ v1 remains locally runnable without Azure credentials or automatic pr
 
 - cloning, building, testing, and demonstrating v1 creates no Azure resource;
 - no Azure resource group exists until an explicit subscription deployment is approved;
-- Microsoft Foundry model adapters are implemented but remain optional; Azure AI Search is the next optional adapter and neither is a local runtime dependency;
+- Microsoft Foundry and Azure AI Search adapters are implemented but remain optional and are not local runtime dependencies;
 - the free Search profile stays keyless for inbound application calls through Entra RBAC, while application-owned code generates and uploads embeddings;
 - Search-managed outbound identity, integrated vectorization, semantic ranking, and dedicated capacity remain a documented Basic-or-higher production evolution;
 - issue #13 records resource assumptions, budgets, keyless authentication, infrastructure as code, and the exact teardown boundary before deployment;

@@ -17,7 +17,7 @@ A contract-operations user needs to answer questions such as:
 ContractIQ brings three kinds of information into one traceable workflow:
 
 1. structured customer and contract data from PostgreSQL;
-2. contract clauses and internal policies retrieved through local hybrid search;
+2. contract clauses and internal policies retrieved through a scoped hybrid index;
 3. a language model that explains the result and may select safe application tools.
 
 The model does not calculate penalties, authorize users, write to the database, or invent citations. The .NET domain recalculates and validates the operation immediately before persistence.
@@ -26,7 +26,7 @@ The model does not calculate penalties, authorize users, write to the database, 
 
 - .NET 10, ASP.NET Core, C#, DDD, Clean Architecture principles, CQRS, EF Core, PostgreSQL, and pgvector;
 - React 19 and TypeScript with an accessible, responsive English and Brazilian Portuguese workspace;
-- local RAG with document versioning, scoped lexical and vector retrieval, Reciprocal Rank Fusion, and application-owned citations;
+- provider-neutral RAG with document versioning, scoped lexical and vector retrieval, and application-owned citations through PostgreSQL/pgvector or optional Azure AI Search;
 - provider-neutral chat, embeddings, and tool calling through `Microsoft.Extensions.AI`, using local Ollama, optional hosted Kimi, or keyless Microsoft Foundry;
 - explicit human confirmation, idempotency, transactions, and domain revalidation for AI-prepared writes;
 - OpenTelemetry traces, metrics, and structured logs with an optional local Aspire Dashboard;
@@ -46,6 +46,7 @@ flowchart LR
     Ports --> Ollama[Ollama<br/>local embeddings and optional chat]
     Ports -. optional hosted chat .-> Kimi[Kimi API]
     Ports -. optional hosted models .-> Foundry[Microsoft Foundry]
+    Ports -. optional hybrid index .-> Search[Azure AI Search]
     Api -. OpenTelemetry .-> Aspire[Local Aspire Dashboard]
 ```
 
@@ -131,7 +132,7 @@ The required GitHub Actions workflow restores locked dependencies, audits NuGet 
 
 Current release-candidate coverage includes:
 
-- 144 backend tests across domain, application, integration, and AI evaluation projects;
+- 156 backend tests across domain, application, integration, and AI evaluation projects;
 - 15 React component and workflow tests;
 - 12 deterministic AI safety scenarios covering grounding, citation integrity, bilingual behavior, refusal, and tool routing.
 
@@ -160,7 +161,7 @@ npm run build
 | Fully local assistant | None                                                            | Adds approximately 2.5 GB for `qwen3:4b` and local CPU/RAM usage |
 | Kimi assistant        | Provider API credits only when a grounded question is submitted | Local PostgreSQL and embeddings remain required                  |
 | Aspire observability  | None                                                            | Optional local container and telemetry storage                   |
-| Microsoft Foundry     | No cost until explicitly provisioned and invoked; inference consumes Azure credit | Local application and PostgreSQL can remain running on the developer machine |
+| Optional Azure AI     | No cost until explicitly provisioned; Search Free has no hourly charge and Foundry inference consumes credit only when invoked | Local application and PostgreSQL remain available |
 
 See [cost and resource management](docs/operations/cost-and-resources.md) for startup, storage, cleanup, credential removal, and the future Azure boundary.
 
@@ -170,7 +171,7 @@ See [cost and resource management](docs/operations/cost-and-resources.md) for st
 src/
   ContractIQ.Domain/          Business rules and aggregates
   ContractIQ.Application/     CQRS use cases, ports, RAG and assistant orchestration
-  ContractIQ.Infrastructure/  EF Core, PostgreSQL, Ollama, Kimi and Foundry adapters
+  ContractIQ.Infrastructure/  EF Core, PostgreSQL, Azure AI Search, Ollama, Kimi and Foundry adapters
   ContractIQ.Api/             HTTP composition root, security and telemetry
   ContractIQ.Web/             React and TypeScript product workspace
 tests/                        Domain, application, integration and AI evaluations
@@ -195,6 +196,7 @@ docs/                         Architecture, decisions, operations and demo mater
 - [Cost and resource management](docs/operations/cost-and-resources.md)
 - [Optional Azure AI implementation plan](docs/azure/implementation-plan.md)
 - [Microsoft Foundry model adapters](docs/azure/foundry-model-adapters.md)
+- [Azure AI Search adapter](docs/azure/azure-ai-search-adapter.md)
 - [Azure infrastructure validation](infra/azure/README.md)
 - [v1.0.0 release checklist](docs/release/v1.0.0-checklist.md)
 - [Architecture Decision Records](docs/adr)
@@ -202,6 +204,6 @@ docs/                         Architecture, decisions, operations and demo mater
 
 ## Project status
 
-The local portfolio MVP is feature-complete and validated for the first `v1.0.0` release. The optional Microsoft Foundry model adapters and non-deploying Azure infrastructure foundation are implemented incrementally; Azure AI Search and Microsoft Entra ID for end users remain separate post-MVP items. None of these services is required to run or evaluate the local version.
+The local portfolio MVP is feature-complete and validated for the first `v1.0.0` release. The optional Microsoft Foundry and Azure AI Search adapters plus the non-deploying Azure infrastructure foundation are implemented incrementally. Live Azure validation and Microsoft Entra ID for end users remain separate post-MVP items. None of these services is required to run or evaluate the local version.
 
 ContractIQ uses fictional companies, contracts, policies, and rules. It is a software engineering demonstration and does not provide legal advice.

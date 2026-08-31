@@ -42,6 +42,17 @@ public static class ContractIqTelemetry
         "contractiq.knowledge.search.result.count",
         unit: "{item}",
         description: "Evidence items returned by hybrid search.");
+    private static readonly Counter<long> KnowledgeIndexDependencyRequests = Meter.CreateCounter<long>(
+        "contractiq.knowledge.index.dependency.requests",
+        description: "Number of knowledge-index dependency operations.");
+    private static readonly Histogram<double> KnowledgeIndexDependencyDuration = Meter.CreateHistogram<double>(
+        "contractiq.knowledge.index.dependency.duration",
+        unit: "s",
+        description: "Knowledge-index dependency operation duration.");
+    private static readonly Histogram<long> KnowledgeIndexDependencyResultCount = Meter.CreateHistogram<long>(
+        "contractiq.knowledge.index.dependency.result.count",
+        unit: "{item}",
+        description: "Items affected or returned by a knowledge-index dependency operation.");
 
     private static readonly Counter<long> ModelRequests = Meter.CreateCounter<long>(
         "contractiq.ai.model.requests",
@@ -112,6 +123,25 @@ public static class ContractIqTelemetry
         KnowledgeSearches.Add(1, tags);
         KnowledgeSearchDuration.Record(duration.TotalSeconds, tags);
         KnowledgeSearchResultCount.Record(resultCount, tags);
+    }
+
+    public static void RecordKnowledgeIndexDependency(
+        string provider,
+        string operation,
+        string outcome,
+        TimeSpan duration,
+        int resultCount)
+    {
+        var tags = new TagList
+        {
+            { "db.system.name", provider },
+            { "db.operation.name", operation },
+            { "contractiq.outcome", outcome },
+        };
+
+        KnowledgeIndexDependencyRequests.Add(1, tags);
+        KnowledgeIndexDependencyDuration.Record(duration.TotalSeconds, tags);
+        KnowledgeIndexDependencyResultCount.Record(resultCount, tags);
     }
 
     public static void RecordModelRequest(
