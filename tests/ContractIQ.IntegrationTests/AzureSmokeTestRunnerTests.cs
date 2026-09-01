@@ -30,6 +30,7 @@ public sealed class AzureSmokeTestRunnerTests
         Assert.Equal(1, embeddings.RequestCount);
         Assert.Equal(2, embeddings.LastValues.Count);
         Assert.Equal(1, index.ReplaceCount);
+        Assert.Equal(1, index.IsCurrentCount);
         Assert.Equal(1, index.SearchCount);
         Assert.Equal(1, index.LastChunkCount);
         Assert.Equal(1, index.LastLimit);
@@ -52,6 +53,7 @@ public sealed class AzureSmokeTestRunnerTests
 
         Assert.Contains("no evidence", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(1, index.ReplaceCount);
+        Assert.Equal(1, index.IsCurrentCount);
         Assert.Equal(1, index.SearchCount);
     }
 
@@ -86,6 +88,8 @@ public sealed class AzureSmokeTestRunnerTests
 
         public int ReplaceCount { get; private set; }
 
+        public int IsCurrentCount { get; private set; }
+
         public int SearchCount { get; private set; }
 
         public int LastChunkCount { get; private set; }
@@ -101,8 +105,11 @@ public sealed class AzureSmokeTestRunnerTests
             string version,
             string contentChecksum,
             string embeddingModel,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult(false);
+            CancellationToken cancellationToken = default)
+        {
+            IsCurrentCount++;
+            return Task.FromResult(_source is not null);
+        }
 
         public Task ReplaceAsync(
             KnowledgeDocumentSource source,
