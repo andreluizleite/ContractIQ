@@ -54,6 +54,12 @@ to three transient retries; the bounded manual smoke test overrides
 `Foundry:MaximumRetries` to `0` so a failed run cannot repeat model consumption
 automatically.
 
+The provider-neutral chat options normally map the output limit to the legacy
+`max_tokens` field. GPT-5 deployments reject that field, so the Foundry adapter
+omits it and sends the same configured limit as `max_completion_tokens` through
+the official OpenAI client options. Ollama and Kimi keep their existing option
+mapping.
+
 Changing the embedding deployment changes the stored embedding model identity.
 Run the document indexer again so document chunks are regenerated consistently.
 

@@ -91,7 +91,12 @@ internal sealed class ChatClientAssistantAnswerGenerator : IAssistantAnswerGener
             var chatOptions = new ChatOptions
             {
                 ModelId = _options.ChatModel,
-                MaxOutputTokens = _options.MaximumOutputTokens,
+                // GPT-5 deployments reject the legacy max_tokens field produced
+                // by the provider-neutral mapping. Foundry receives the same
+                // limit through max_completion_tokens in its raw options.
+                MaxOutputTokens = _options.Provider == AssistantProvider.Foundry
+                    ? null
+                    : _options.MaximumOutputTokens,
                 // Kimi models have provider-defined fixed temperatures and reject
                 // the 0.1 value used by the local deterministic demo profile.
                 Temperature = _options.Provider == AssistantProvider.Ollama
@@ -110,6 +115,11 @@ internal sealed class ChatClientAssistantAnswerGenerator : IAssistantAnswerGener
             if (_options.Provider == AssistantProvider.Kimi)
             {
                 chatOptions.RawRepresentationFactory = _ => CreateKimiChatOptions();
+            }
+            else if (_options.Provider == AssistantProvider.Foundry)
+            {
+                chatOptions.RawRepresentationFactory = _ =>
+                    CreateFoundryChatOptions(_options.MaximumOutputTokens);
             }
 
             ChatResponse response = await _chatClient.GetResponseAsync(
@@ -206,6 +216,13 @@ internal sealed class ChatClientAssistantAnswerGenerator : IAssistantAnswerGener
         return options;
     }
 #pragma warning restore SCME0001
+
+    internal static OpenAIChatCompletionOptions CreateFoundryChatOptions(
+        int maximumOutputTokens) =>
+        new()
+        {
+            MaxOutputTokenCount = maximumOutputTokens,
+        };
 
     private ExternalDependencyUnavailableException CreateUnavailableException(
         Exception exception)
