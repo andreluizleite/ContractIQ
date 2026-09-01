@@ -91,6 +91,11 @@ resource foundryProject 'Microsoft.CognitiveServices/accounts/projects@2025-06-0
 resource chatDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = if (deployModels) {
   name: chatDeploymentName
   parent: foundryAccount
+  // Cognitive Services can reject concurrent child writes on a newly created
+  // account. Keep project -> embeddings -> chat deterministic and idempotent.
+  dependsOn: [
+    embeddingDeployment
+  ]
   sku: {
     name: 'GlobalStandard'
     capacity: modelCapacity
@@ -107,6 +112,9 @@ resource chatDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-1
 resource embeddingDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = if (deployModels) {
   name: embeddingDeploymentName
   parent: foundryAccount
+  dependsOn: [
+    foundryProject
+  ]
   sku: {
     name: 'GlobalStandard'
     capacity: modelCapacity
