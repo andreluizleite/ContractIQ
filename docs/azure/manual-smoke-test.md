@@ -12,6 +12,9 @@ The workflow is safe by construction:
 - no Azure client secret or service key is stored in GitHub;
 - the tool sends one embedding request containing exactly two short fictional inputs;
 - it indexes exactly one fictional chunk and performs one hybrid search query;
+- it performs bounded Search-only readiness checks until the uploaded version is
+  visible, accounting for Azure AI Search eventual consistency without repeating
+  the embedding request or the hybrid query;
 - Foundry and Azure AI Search SDK retries are set to zero for this run;
 - the tool times out after 90 seconds and the job after five minutes;
 - concurrent runs for the same environment are serialized;

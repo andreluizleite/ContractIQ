@@ -22,6 +22,9 @@ internal sealed class AzureSmokeTestRunner(
         "A cancellation request requires 30 days written notice before termination.";
     private const string Query =
         "How much written notice is required for cancellation?";
+    private const int IndexReadinessAttempts = 20;
+    private static readonly TimeSpan IndexReadinessDelay =
+        TimeSpan.FromMilliseconds(250);
 
     public async Task<AzureSmokeTestReport> RunAsync(
         CancellationToken cancellationToken = default)
@@ -61,6 +64,10 @@ internal sealed class AzureSmokeTestRunner(
             embeddingGenerator.ModelId,
             [chunk],
             cancellationToken);
+        await WaitUntilIndexedAsync(
+            source,
+            ComputeChecksum(source.Content),
+            cancellationToken);
 
         IReadOnlyList<KnowledgeEvidence> evidence = await knowledgeIndex.SearchAsync(
             Query,
@@ -96,6 +103,36 @@ internal sealed class AzureSmokeTestRunner(
             SearchResultCount: evidence.Count,
             SearchProvider: "azure-ai-search",
             IndexName: indexName);
+    }
+
+    private async Task WaitUntilIndexedAsync(
+        KnowledgeDocumentSource source,
+        string contentChecksum,
+        CancellationToken cancellationToken)
+    {
+        for (int attempt = 1; attempt <= IndexReadinessAttempts; attempt++)
+        {
+            if (await knowledgeIndex.IsCurrentAsync(
+                    source.DocumentKey,
+                    source.Version,
+                    contentChecksum,
+                    embeddingGenerator.ModelId,
+                    cancellationToken))
+            {
+                return;
+            }
+
+            if (attempt < IndexReadinessAttempts)
+            {
+                await Task.Delay(
+                    IndexReadinessDelay,
+                    timeProvider,
+                    cancellationToken);
+            }
+        }
+
+        throw new InvalidOperationException(
+            "The indexed smoke-test document did not become searchable in time.");
     }
 
     private void ValidateEmbeddings(IReadOnlyList<float[]> embeddings)
