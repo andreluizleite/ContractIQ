@@ -31,8 +31,11 @@ param embeddingModelName string
 @description('Pinned embedding model version selected from the live catalog.')
 param embeddingModelVersion string
 
-@description('GlobalStandard capacity in thousands of tokens per minute.')
-param modelCapacity int
+@description('GlobalStandard chat capacity in thousands of tokens per minute.')
+param chatModelCapacity int
+
+@description('GlobalStandard embedding capacity in thousands of tokens per minute.')
+param embeddingModelCapacity int
 
 var foundryAccountName = 'aif-contractiq-${environmentName}-${uniqueSuffix}'
 var foundryProjectName = 'contractiq-${environmentName}'
@@ -98,7 +101,7 @@ resource chatDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-1
   ]
   sku: {
     name: 'GlobalStandard'
-    capacity: modelCapacity
+    capacity: chatModelCapacity
   }
   properties: {
     model: {
@@ -117,7 +120,7 @@ resource embeddingDeployment 'Microsoft.CognitiveServices/accounts/deployments@2
   ]
   sku: {
     name: 'GlobalStandard'
-    capacity: modelCapacity
+    capacity: embeddingModelCapacity
   }
   properties: {
     model: {

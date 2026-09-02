@@ -54,11 +54,19 @@ to three transient retries; the bounded manual smoke test overrides
 `Foundry:MaximumRetries` to `0` so a failed run cannot repeat model consumption
 automatically.
 
+The reviewed portfolio deployment assigns 10K TPM to chat and keeps embeddings
+at 1K TPM. The capacities are separate because a chat request contains the
+system prompt and tool schemas, while the bounded document batches require far
+less throughput. A 1K chat deployment rejects the complete agent request with
+HTTP 429 before generation.
+
 The provider-neutral chat options normally map the output limit to the legacy
 `max_tokens` field. GPT-5 deployments reject that field, so the Foundry adapter
 omits it and sends the same configured limit as `max_completion_tokens` through
-the official OpenAI client options. Ollama and Kimi keep their existing option
-mapping.
+the official OpenAI client options. The Foundry profile also selects minimal
+reasoning effort so the bounded 600-token budget preserves enough visible
+output for tool selection and a concise cited answer. Ollama and Kimi keep their
+existing option mapping.
 
 Changing the embedding deployment changes the stored embedding model identity.
 Run the document indexer again so document chunks are regenerated consistently.
