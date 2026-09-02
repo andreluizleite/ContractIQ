@@ -7,6 +7,7 @@ using ContractIQ.Application.Common.Exceptions;
 using ContractIQ.Application.Common.Observability;
 using ContractIQ.Infrastructure.AI;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
 using OllamaSharp;
 using OllamaSharp.Models.Exceptions;
 using OpenAI;
@@ -21,16 +22,19 @@ namespace ContractIQ.Infrastructure.Assistant;
 internal sealed class ChatClientAssistantAnswerGenerator : IAssistantAnswerGenerator, IDisposable
 {
     private readonly IChatClient _chatClient;
+    private readonly ILogger<ChatClientAssistantAnswerGenerator> _logger;
     private readonly AssistantOptions _options;
     private readonly ContractAssistantReadTools _readTools;
 
     public ChatClientAssistantAnswerGenerator(
         AssistantOptions options,
         ContractAssistantReadTools readTools,
-        FoundryOpenAIClientFactory foundryClientFactory)
+        FoundryOpenAIClientFactory foundryClientFactory,
+        ILogger<ChatClientAssistantAnswerGenerator> logger)
     {
         _options = options;
         _readTools = readTools;
+        _logger = logger;
         _chatClient = new FunctionInvokingChatClient(
             CreateProviderClient(options, foundryClientFactory))
         {
@@ -218,15 +222,39 @@ internal sealed class ChatClientAssistantAnswerGenerator : IAssistantAnswerGener
 #pragma warning restore SCME0001
 
     internal static OpenAIChatCompletionOptions CreateFoundryChatOptions(
-        int maximumOutputTokens) =>
-        new()
+        int maximumOutputTokens)
+    {
+        var options = new OpenAIChatCompletionOptions
         {
             MaxOutputTokenCount = maximumOutputTokens,
         };
 
+        // The original GPT-5 models support "minimal", but OpenAI 2.12 only
+        // exposes low/medium/high as typed values. ContractIQ disables parallel
+        // tool calls, so the documented minimal setting is compatible here and
+        // preserves visible answer tokens inside the bounded output budget.
+#pragma warning disable SCME0001 // Patch is required until the SDK exposes GPT-5 minimal effort.
+        options.Patch.Set(
+            "$.reasoning_effort"u8,
+            BinaryData.FromString("\"minimal\""));
+#pragma warning restore SCME0001
+
+        return options;
+    }
+
     private ExternalDependencyUnavailableException CreateUnavailableException(
         Exception exception)
     {
+        // Keep prompts, answers, document content, and credentials out of logs.
+        // The exception type and provider message are enough to diagnose rejected
+        // parameters, authentication failures, and unavailable deployments.
+        _logger.LogWarning(
+            "AI provider {Provider} rejected the request for model {Model}. {ExceptionType}: {ExceptionMessage}",
+            _options.Provider,
+            _options.ChatModel,
+            exception.GetType().Name,
+            exception.Message);
+
         string dependency = _options.Provider switch
         {
             AssistantProvider.Foundry => "foundry",

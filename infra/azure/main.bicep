@@ -41,9 +41,13 @@ param embeddingModelName string = 'text-embedding-3-small'
 @description('Pinned embedding model version selected from the live Foundry catalog.')
 param embeddingModelVersion string = '1'
 
-@description('GlobalStandard deployment capacity in thousands of tokens per minute. Capacity reserves quota, not prepaid spend.')
+@description('GlobalStandard chat capacity in thousands of tokens per minute. Ten allows one bounded agent request to include its instructions and tool schemas. Capacity reserves quota, not prepaid spend.')
 @minValue(1)
-param modelCapacity int = 1
+param chatModelCapacity int = 10
+
+@description('GlobalStandard embedding capacity in thousands of tokens per minute. The bounded portfolio indexer keeps the minimum allocation.')
+@minValue(1)
+param embeddingModelCapacity int = 1
 
 @description('Additional tags applied to every provisioned resource.')
 param tags object = {}
@@ -122,7 +126,8 @@ module aiPlatform 'modules/ai-platform.bicep' = {
     embeddingModelVersion: embeddingModelVersion
     environmentName: environmentName
     location: location
-    modelCapacity: modelCapacity
+    chatModelCapacity: chatModelCapacity
+    embeddingModelCapacity: embeddingModelCapacity
     smokeTestPrincipalId: smokeTestPrincipalId
     tags: commonTags
     uniqueSuffix: uniqueSuffix

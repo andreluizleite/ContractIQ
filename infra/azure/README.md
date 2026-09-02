@@ -9,7 +9,7 @@ This folder contains the reviewed infrastructure boundary for ContractIQ's optio
 | Resource group | One isolated development group | No charge |
 | Subscription budget | USD 10 planning target with 50%, 80%, and 100% alerts | No charge; alerts do not stop spend |
 | Microsoft Foundry account and project | `AIServices`, public development endpoint, local authentication disabled | Account/project have no committed throughput |
-| Optional model deployments | `gpt-5-mini` and `text-embedding-3-small`, `GlobalStandard`, 1K TPM each | No fixed deployment charge; inference is usage-based |
+| Optional model deployments | `gpt-5-mini` at 10K TPM and `text-embedding-3-small` at 1K TPM, both `GlobalStandard` | No fixed deployment charge; inference is usage-based |
 | Azure AI Search | Free tier, one shared service with a 50 MB limit | No charge while the free tier remains available and its limits are respected |
 | Role assignments | Least-privilege roles for the local developer and optional GitHub OIDC service principal | No charge |
 
@@ -17,6 +17,14 @@ Model deployments are declared but disabled by default through `deployModels=fal
 The selected names, versions, SKU, capacity, and region were resolved against
 the live catalog and subscription quota on 2026-08-31. They must be checked
 again if the deployment is executed later or in another subscription.
+
+The chat and embedding capacities are intentionally separate. A live agent
+request includes its system instructions and application-owned tool schemas, so
+the original 1K chat allocation rejected the bounded demo before inference with
+HTTP 429. The 10K chat allocation fits that request while embeddings remain at
+the minimum 1K allocation. These values limit throughput; they do not prepay
+tokens. The USD 10 budget and zero-retry live validation boundary remain in
+place.
 
 The template outputs `foundryOpenAIEndpoint` in the form expected by the .NET
 chat and embedding adapters: `https://<resource-name>.openai.azure.com/openai/v1/`.
