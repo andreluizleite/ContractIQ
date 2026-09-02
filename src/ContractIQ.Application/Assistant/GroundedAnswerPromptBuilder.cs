@@ -6,6 +6,8 @@ namespace ContractIQ.Application.Assistant;
 
 public sealed class GroundedAnswerPromptBuilder
 {
+    public const string Version = "grounded-answer-v1";
+
     private const int MaximumEvidenceCharacters = 2_000;
 
     private const string Instructions = """

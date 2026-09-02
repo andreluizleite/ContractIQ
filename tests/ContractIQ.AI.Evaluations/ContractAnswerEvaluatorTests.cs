@@ -18,6 +18,12 @@ public sealed class ContractAnswerEvaluatorTests
 
         Assert.True(report.Passed);
         Assert.Equal(12, report.TotalScenarios);
+        Assert.Equal("1.1", report.SchemaVersion);
+        Assert.Equal(dataset.Name, report.DatasetName);
+        Assert.Equal("contract-assistant-v1", report.DatasetSchemaVersion);
+        Assert.Equal("deterministic-baseline", report.Provider);
+        Assert.Equal("deterministic-baseline-v2", report.Deployment);
+        Assert.Equal("grounded-answer-v1", report.PromptVersion);
         Assert.All(report.Scenarios, scenario =>
             Assert.Contains(scenario.Findings, finding =>
                 finding.Metric == "preparation_no_write" && finding.Passed));

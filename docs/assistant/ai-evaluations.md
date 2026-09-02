@@ -88,7 +88,10 @@ TestResults/ai-evaluations/report.json
 TestResults/ai-evaluations/report.md
 ```
 
-The report includes scenario identifiers, language, metrics, and pass/fail outcomes. It intentionally excludes questions, generated answers, document content, customer content, and credentials.
+The report includes the dataset name and schema version, provider, deployment,
+observed model id, prompt version, UTC run date, scenario identifiers, language,
+metrics, and pass/fail outcomes. It intentionally excludes questions, generated
+answers, document content, customer content, and credentials.
 
 The offline result is a required CI gate. It catches application orchestration, domain, citation, and tool-safety regressions without pretending that deterministic simulated prose is a real model response. It deliberately attempts an unconfirmed command and proves that no cancellation request reaches storage; it never performs a confirmed write.
 
@@ -99,8 +102,34 @@ Start PostgreSQL, index the sample documents, and run the API with the provider 
 ```powershell
 dotnet run --project tools/ContractIQ.AiEvaluator -- `
   --mode live `
-  --base-url http://localhost:5186
+  --base-url http://localhost:5186 `
+  --provider MicrosoftFoundry `
+  --deployment contractiq-chat
 ```
+
+Use `--scenario-ids` to run an explicitly bounded comma-separated subset. For
+example, this bilingual four-scenario observation makes exactly four assistant
+HTTP requests instead of running the complete live dataset:
+
+```powershell
+dotnet run --project tools/ContractIQ.AiEvaluator -- `
+  --mode live `
+  --base-url http://localhost:5186 `
+  --provider MicrosoftFoundry `
+  --deployment contractiq-chat `
+  --scenario-ids acme-penalty-en,acme-penalty-pt-br,acme-prepare-en,acme-prepare-pt-br
+```
+
+Each scenario performs one initial query-embedding request. The agent can also
+invoke the search tool during any of its four bounded iterations, and each such
+invocation performs another query embedding. The chat client is capped at four
+completion rounds. Therefore the conservative paid-provider ceiling for this
+four-scenario slice is 20 embedding requests plus 16 chat requests: **36 model
+requests**. The actual count is normally lower, but approval must use the hard
+ceiling rather than an optimistic estimate. Start the API with
+`Foundry__MaximumRetries=0` and `AzureSearch__MaximumRetries=0` for this run so
+SDK retries cannot exceed that ceiling. Do not run the command against a hosted
+provider until the bounded execution has been approved.
 
 The live runner:
 
@@ -114,6 +143,10 @@ The live runner:
 - writes the same sanitized report format.
 
 Live execution is not a required PR check because model responses vary and hosted providers may cost money. Running it against Kimi, Microsoft Foundry, OpenAI, or another hosted provider is an explicit user decision. Never commit the provider key or include it in an evaluation report.
+
+The dated [offline fallback validation](local-fallback-validation-2026-09-02.md)
+records the free, reproducible portfolio result and the automated proof that a
+model outage does not block deterministic contract operations.
 
 ## Interpretation and limitations
 

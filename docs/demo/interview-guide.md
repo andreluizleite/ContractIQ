@@ -228,6 +228,13 @@ The interview remains demonstrable if Ollama or Kimi is unavailable:
 
 This fallback is intentional. A model-provider outage must not remove the application's contract operations.
 
+This behavior is automated at both boundaries: the React test simulates a 503
+from the assistant and keeps the direct cancellation action enabled, while the
+API integration test proves that assessment and cancellation creation still
+succeed when the answer generator is unavailable. The dated
+[fallback evaluation evidence](../assistant/local-fallback-validation-2026-09-02.md)
+can be shown without contacting Azure.
+
 ## Common interview questions
 
 ### Why a modular monolith?

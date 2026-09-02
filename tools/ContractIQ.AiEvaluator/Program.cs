@@ -17,6 +17,7 @@ try
         arguments.GetValueOrDefault("output", OutputRelativePath));
 
     EvaluationDataset dataset = await EvaluationJson.ReadAsync<EvaluationDataset>(datasetPath);
+    dataset = SelectScenarios(dataset, arguments.GetValueOrDefault("scenario-ids"));
     var runner = new EvaluationRunner(new ContractAnswerEvaluator());
     AiEvaluationReport report;
 
@@ -27,6 +28,7 @@ try
             arguments.GetValueOrDefault("baseline", BaselineRelativePath));
         EvaluationBaseline baseline =
             await EvaluationJson.ReadAsync<EvaluationBaseline>(baselinePath);
+        baseline = SelectResponses(baseline, dataset);
         report = await runner.RunOfflineAsync(dataset, baseline);
     }
     else if (string.Equals(mode, "live", StringComparison.OrdinalIgnoreCase))
@@ -44,7 +46,9 @@ try
         };
         report = await runner.RunLiveAsync(
             dataset,
-            new LiveEvaluationClient(httpClient));
+            new LiveEvaluationClient(httpClient),
+            arguments.GetValueOrDefault("provider", "configured-api-provider"),
+            arguments.GetValueOrDefault("deployment"));
     }
     else
     {
@@ -105,3 +109,53 @@ static string FindRepositoryRoot(string startPath)
 static string ResolvePath(string root, string path) => Path.IsPathRooted(path)
     ? Path.GetFullPath(path)
     : Path.GetFullPath(Path.Combine(root, path));
+
+static EvaluationDataset SelectScenarios(
+    EvaluationDataset dataset,
+    string? selectedScenarioIds)
+{
+    if (string.IsNullOrWhiteSpace(selectedScenarioIds))
+    {
+        return dataset;
+    }
+
+    string[] requestedIds = selectedScenarioIds
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    if (requestedIds.Length == 0 ||
+        requestedIds.Distinct(StringComparer.Ordinal).Count() != requestedIds.Length)
+    {
+        throw new ArgumentException(
+            "--scenario-ids must contain unique comma-separated scenario ids.");
+    }
+
+    IReadOnlyDictionary<string, EvaluationScenario> available = dataset.Scenarios
+        .ToDictionary(scenario => scenario.Id, StringComparer.Ordinal);
+    string[] unknownIds = requestedIds
+        .Where(id => !available.ContainsKey(id))
+        .ToArray();
+    if (unknownIds.Length > 0)
+    {
+        throw new ArgumentException(
+            $"Unknown scenario ids: {string.Join(", ", unknownIds)}.");
+    }
+
+    return dataset with
+    {
+        Scenarios = requestedIds.Select(id => available[id]).ToArray(),
+    };
+}
+
+static EvaluationBaseline SelectResponses(
+    EvaluationBaseline baseline,
+    EvaluationDataset dataset)
+{
+    HashSet<string> selectedIds = dataset.Scenarios
+        .Select(scenario => scenario.Id)
+        .ToHashSet(StringComparer.Ordinal);
+    return baseline with
+    {
+        Responses = baseline.Responses
+            .Where(response => selectedIds.Contains(response.ScenarioId))
+            .ToArray(),
+    };
+}
