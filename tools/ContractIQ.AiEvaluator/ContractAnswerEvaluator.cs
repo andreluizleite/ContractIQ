@@ -190,7 +190,18 @@ public sealed partial class ContractAnswerEvaluator
         }
 
         bool containsPhrase = scenario.Expected.RequiredAnswerPhrases.All(phrase =>
-            answer.Answer.Contains(phrase, StringComparison.OrdinalIgnoreCase));
+        {
+            IEnumerable<string> acceptedSignals = [phrase];
+            if (scenario.Expected.RequiredAnswerAlternatives.TryGetValue(
+                    phrase,
+                    out IReadOnlyList<string>? alternatives))
+            {
+                acceptedSignals = acceptedSignals.Concat(alternatives);
+            }
+
+            return acceptedSignals.Any(signal =>
+                answer.Answer.Contains(signal, StringComparison.OrdinalIgnoreCase));
+        });
         Add(
             findings,
             "required_answer_signal",
@@ -267,25 +278,29 @@ public sealed partial class ContractAnswerEvaluator
                 date == canonicalAssessment.EarliestTerminationDate),
             "Any stated date must match a canonical assessment date.");
 
-        Add(
-            findings,
-            "unsupported_percentage",
-            !PercentageRegex().IsMatch(answer.Answer),
-            "The response must not introduce a percentage absent from the canonical assessment.");
-
-        (string Currency, decimal? Amount)[] statedAmounts = CurrencyAmountRegex()
+        decimal[] statedPercentages = PercentageRegex()
             .Matches(answer.Answer)
-            .Select(match => (
-                match.Groups[1].Value.ToUpperInvariant(),
-                ParseLocalizedAmount(match.Groups[2].Value)))
+            .Select(match => ParseLocalizedAmount(match.Groups[1].Value))
+            .Where(value => value.HasValue)
+            .Select(value => value!.Value)
             .ToArray();
         Add(
             findings,
+            "unsupported_percentage",
+            statedPercentages.All(scenario.Expected.AllowedPercentages.Contains),
+            "The response must not introduce a percentage outside the scenario allow-list.");
+
+        bool penaltyAmountsAreConsistent = CurrencyAmountRegex()
+            .Matches(answer.Answer)
+            .All(match => IsConsistentPenaltyAmount(
+                answer.Answer,
+                match,
+                canonicalAssessment));
+        Add(
+            findings,
             "critical_fact_consistency",
-            statedAmounts.All(item =>
-                item.Currency == canonicalAssessment.Penalty.Currency &&
-                item.Amount == canonicalAssessment.Penalty.Amount),
-            "The response must not state a currency or amount that contradicts the domain penalty.");
+            penaltyAmountsAreConsistent,
+            "Any amount described as a penalty must match the canonical domain penalty.");
 
         if (!scenario.Expected.RequiresPenaltyMention)
         {
@@ -356,6 +371,86 @@ public sealed partial class ContractAnswerEvaluator
             : null;
     }
 
+    private static bool IsConsistentPenaltyAmount(
+        string answer,
+        Match match,
+        CancellationAssessmentDto canonicalAssessment)
+    {
+        string currency = match.Groups[1].Value.ToUpperInvariant();
+        decimal? amount = ParseLocalizedAmount(match.Groups[2].Value);
+        if (currency == canonicalAssessment.Penalty.Currency &&
+            amount == canonicalAssessment.Penalty.Amount)
+        {
+            return true;
+        }
+
+        // Read tools may return other legitimate monetary fields, such as the
+        // monthly fee. Compare a value with the canonical penalty only when the
+        // surrounding clause actually describes it as a penalty.
+        int clauseStart = FindClauseStart(answer, match.Index);
+        string clause = ExtractClause(answer, match.Index, match.Length);
+        int relativeAmountIndex = Math.Clamp(
+            match.Index - clauseStart,
+            0,
+            clause.Length);
+        string prefix = clause[..relativeAmountIndex];
+        if (MonthlyAmountContextRegex().IsMatch(prefix))
+        {
+            return true;
+        }
+
+        return !PenaltyContextRegex().IsMatch(clause);
+    }
+
+    private static string ExtractClause(string value, int index, int length)
+    {
+        int start = FindClauseStart(value, index);
+        int end = value.Length;
+        for (int position = index + length; position < value.Length; position++)
+        {
+            if (IsClauseDelimiter(value, position))
+            {
+                end = position;
+                break;
+            }
+        }
+
+        return value[start..end];
+    }
+
+    private static int FindClauseStart(string value, int index)
+    {
+        if (index <= 0)
+        {
+            return 0;
+        }
+
+        for (int position = index - 1; position >= 0; position--)
+        {
+            if (IsClauseDelimiter(value, position))
+            {
+                return position + 1;
+            }
+        }
+
+        return 0;
+    }
+
+    private static bool IsClauseDelimiter(string value, int index)
+    {
+        char character = value[index];
+        if (character == '.' &&
+            index > 0 &&
+            index + 1 < value.Length &&
+            char.IsDigit(value[index - 1]) &&
+            char.IsDigit(value[index + 1]))
+        {
+            return false;
+        }
+
+        return character is '.' or '!' or '?' or ';' or '\n' or '\r';
+    }
+
     private static void Add(
         List<EvaluationFinding> findings,
         string metric,
@@ -370,8 +465,14 @@ public sealed partial class ContractAnswerEvaluator
     [GeneratedRegex(@"\b(\d+)\s*(?:days?|dias?)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex NoticeDaysRegex();
 
-    [GeneratedRegex(@"\d+(?:[.,]\d+)?\s*%", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"(\d+(?:[.,]\d+)?)\s*%", RegexOptions.CultureInvariant)]
     private static partial Regex PercentageRegex();
+
+    [GeneratedRegex(@"\b(?:penalty|early termination charge|termination fee|multa|penalidade|encargo de rescis[aã]o)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex PenaltyContextRegex();
+
+    [GeneratedRegex(@"\b(?:monthly fee|monthly charge|monthly amount|mensalidade|valor mensal|taxa mensal)\b.{0,40}$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex MonthlyAmountContextRegex();
 
     [GeneratedRegex(@"\b\d{4}-\d{2}-\d{2}\b", RegexOptions.CultureInvariant)]
     private static partial Regex IsoDateRegex();

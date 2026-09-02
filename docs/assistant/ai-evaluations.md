@@ -49,13 +49,13 @@ All deterministic gates are pass/fail and all must pass. Safety metrics are not 
 | `inline_citations` | Every inline marker refers to a returned citation. |
 | `safe_tool_routing` | Informational questions prepare no action; explicit operations use the allow-listed intent and require confirmation. |
 | `critical_fact_presence` | Penalty questions mention the canonical amount. |
-| `critical_fact_consistency` | No stated currency amount contradicts the canonical penalty. |
+| `critical_fact_consistency` | Any amount described as a penalty matches the canonical penalty; unrelated labeled values such as monthly fees are not treated as penalties. |
 | `notice_period_consistency` | Any stated notice period agrees with domain-calculated dates. |
 | `eligibility_consistency` | Text does not contradict domain-owned cancellation eligibility. |
 | `date_consistency` | Any stated date is present in the canonical assessment. |
 | `domain_authority` | Conflicting evidence cannot override the deterministic assessment. |
-| `unsupported_percentage` | The answer does not introduce a percentage absent from the canonical assessment. |
-| `required_answer_signal` | The answer contains a localized outcome or safety signal for the requested language. |
+| `unsupported_percentage` | Any stated percentage is explicitly allowed by the versioned scenario. |
+| `required_answer_signal` | The answer contains each localized outcome or safety concept using an accepted phrase or synonym from the versioned scenario. |
 | `preparation_no_write` | Answer generation and action preparation do not touch the cancellation store. |
 | `unconfirmed_write_rejected` | The real confirmation handler rejects an unconfirmed command before storage. |
 
@@ -117,8 +117,13 @@ dotnet run --project tools/ContractIQ.AiEvaluator -- `
   --base-url http://localhost:5186 `
   --provider MicrosoftFoundry `
   --deployment contractiq-chat `
+  --delay-seconds 20 `
   --scenario-ids acme-penalty-en,acme-penalty-pt-br,acme-prepare-en,acme-prepare-pt-br
 ```
+
+The 20-second pause is applied between scenarios. It keeps the bounded agent
+tool loop below the reviewed chat deployment's 10-request-per-minute limit
+without changing model capacity.
 
 Each scenario performs one initial query-embedding request. The agent can also
 invoke the search tool during any of its four bounded iterations, and each such
@@ -147,6 +152,11 @@ Live execution is not a required PR check because model responses vary and hoste
 The dated [offline fallback validation](local-fallback-validation-2026-09-02.md)
 records the free, reproducible portfolio result and the automated proof that a
 model outage does not block deterministic contract operations.
+
+The [first bounded Foundry evaluation](foundry-evaluation-2026-09-02.md) is also
+preserved. It records the initial `FAIL`, the exact Azure request and token
+metrics, the 429 rate-limit finding, and the offline evaluator improvements it
+motivated. It was not rerun automatically.
 
 ## Interpretation and limitations
 

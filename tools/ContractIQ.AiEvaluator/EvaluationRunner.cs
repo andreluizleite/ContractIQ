@@ -73,14 +73,21 @@ public sealed class EvaluationRunner(ContractAnswerEvaluator evaluator)
         ILiveEvaluationClient client,
         string provider = "configured-api-provider",
         string? deployment = null,
+        TimeSpan? scenarioDelay = null,
         CancellationToken cancellationToken = default)
     {
         var evaluations = new List<ScenarioEvaluation>(dataset.Scenarios.Count);
         var modelIds = new HashSet<string>(StringComparer.Ordinal);
+        TimeSpan delay = scenarioDelay ?? TimeSpan.Zero;
 
         foreach (EvaluationScenario scenario in dataset.Scenarios.Where(item => !item.OfflineOnly))
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (evaluations.Count > 0 && delay > TimeSpan.Zero)
+            {
+                await Task.Delay(delay, cancellationToken);
+            }
+
             try
             {
                 CancellationAssessmentDto canonicalAssessment =

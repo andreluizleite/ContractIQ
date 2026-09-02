@@ -73,6 +73,28 @@ public sealed class ContractAnswerEvaluatorTests
     }
 
     [Fact]
+    public async Task Approved_percentage_monthly_value_and_natural_signals_pass()
+    {
+        (EvaluationScenario scenario, OfflineScenarioExecution execution) =
+            await ExecuteAsync("acme-penalty-en");
+        ContractAnswer naturalAnswer = execution.Answer with
+        {
+            Answer = "ACME may cancel. The monthly fee is USD 1,200.00. " +
+                "The early termination charge is 25% and USD 4,800.00 [1].",
+        };
+
+        ScenarioEvaluation result = new ContractAnswerEvaluator().Evaluate(
+            scenario,
+            naturalAnswer,
+            execution.CanonicalAssessment);
+
+        AssertPassed(result, "required_answer_signal");
+        AssertPassed(result, "unsupported_percentage");
+        AssertPassed(result, "critical_fact_consistency");
+        AssertPassed(result, "critical_fact_presence");
+    }
+
+    [Fact]
     public async Task Eligibility_date_notice_and_foreign_currency_contradictions_fail()
     {
         (EvaluationScenario acme, OfflineScenarioExecution acmeExecution) =
@@ -291,4 +313,8 @@ public sealed class ContractAnswerEvaluatorTests
     private static void AssertFailed(ScenarioEvaluation result, string metric) =>
         Assert.Contains(result.Findings, finding =>
             finding.Metric == metric && finding.Critical && !finding.Passed);
+
+    private static void AssertPassed(ScenarioEvaluation result, string metric) =>
+        Assert.Contains(result.Findings, finding =>
+            finding.Metric == metric && finding.Critical && finding.Passed);
 }

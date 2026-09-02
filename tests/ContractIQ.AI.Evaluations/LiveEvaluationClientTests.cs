@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -114,6 +115,25 @@ public sealed class LiveEvaluationClientTests
         Assert.Equal(0, client.CallCount);
     }
 
+    [Fact]
+    public async Task Live_runner_applies_the_configured_delay_between_scenarios()
+    {
+        (EvaluationDataset dataset, _) = await EvaluationTestData.LoadAsync();
+        var client = new TimestampFailingClient();
+        var runner = new EvaluationRunner(new ContractAnswerEvaluator());
+
+        await runner.RunLiveAsync(
+            dataset with { Scenarios = dataset.Scenarios.Take(2).ToArray() },
+            client,
+            scenarioDelay: TimeSpan.FromMilliseconds(50));
+
+        Assert.Equal(2, client.CallTimestamps.Count);
+        TimeSpan elapsed = Stopwatch.GetElapsedTime(
+            client.CallTimestamps[0],
+            client.CallTimestamps[1]);
+        Assert.True(elapsed >= TimeSpan.FromMilliseconds(40), $"Observed {elapsed}.");
+    }
+
     private sealed class RecordingHandler(OfflineScenarioExecution baselineResponse)
         : HttpMessageHandler
     {
@@ -177,5 +197,24 @@ public sealed class LiveEvaluationClientTests
             CallCount++;
             throw new InvalidOperationException("An offline-only scenario reached the live client.");
         }
+    }
+
+    private sealed class TimestampFailingClient : ILiveEvaluationClient
+    {
+        public List<long> CallTimestamps { get; } = [];
+
+        public Task<CancellationAssessmentDto> GetCanonicalAssessmentAsync(
+            EvaluationScenario scenario,
+            CancellationToken cancellationToken)
+        {
+            CallTimestamps.Add(Stopwatch.GetTimestamp());
+            return Task.FromException<CancellationAssessmentDto>(
+                new HttpRequestException("Expected timing-test failure."));
+        }
+
+        public Task<ContractAnswer> AskAsync(
+            EvaluationScenario scenario,
+            CancellationToken cancellationToken) => throw new InvalidOperationException(
+                "The timing test fails before asking the assistant.");
     }
 }

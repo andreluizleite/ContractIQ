@@ -41,6 +41,11 @@ public sealed record EvaluationExpectation(
     IReadOnlyList<string> RequiredAnswerPhrases,
     bool RequiresPenaltyMention)
 {
+    public IReadOnlyDictionary<string, IReadOnlyList<string>> RequiredAnswerAlternatives { get; init; } =
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+
+    public IReadOnlyList<decimal> AllowedPercentages { get; init; } = [];
+
     public IReadOnlyDictionary<string, string> RequiredSourcePaths { get; init; } =
         new Dictionary<string, string>(StringComparer.Ordinal);
 
