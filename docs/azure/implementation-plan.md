@@ -36,15 +36,13 @@ ContractIQ does not deploy a second hosted agent in Foundry for this increment. 
 
 ## Delivery slices
 
-Status on 2026-08-31: the Azure foundation definitions, Foundry model adapters,
-Azure AI Search adapter, and bounded manual OIDC smoke-test workflow are
-implemented and validated without provisioning resources. Brazil South has
-live catalog capacity and subscription quota for `gpt-5-mini` version
-`2025-08-07` and `text-embedding-3-small` version `1` on `GlobalStandard`.
-Their Bicep deployments remain disabled by default and live execution still
-requires explicitly approved provisioning and GitHub environment configuration.
+Status on 2026-09-02: the cost-controlled foundation was provisioned in Brazil
+South and the Foundry chat/embedding adapters plus Azure AI Search hybrid adapter
+were validated end to end. Bicep model deployment remains opt-in for a fresh
+environment, normal CI makes no hosted call, and the local profile remains the
+default. See the [dated live evidence](live-validation-2026-09-02.md).
 
-### 1. Azure foundation — implemented, not deployed
+### 1. Azure foundation — deployed and verified
 
 - validate the subscription, ownership, quota, and provider availability;
 - review Bicep with a subscription budget, one resource group, a Foundry account/project, free Azure AI Search, and RBAC;
@@ -52,7 +50,7 @@ requires explicitly approved provisioning and GitHub environment configuration.
 - keep model resources behind `deployModels=false` until their live SKU, quota,
   cost boundary, and provisioning are explicitly approved.
 
-### 2. Foundry adapters — implemented, not invoked live
+### 2. Foundry adapters — implemented and invoked live
 
 - add a `Foundry` assistant provider without changing the local default;
 - authenticate with `DefaultAzureCredential` and the developer's Azure CLI session;
@@ -60,7 +58,7 @@ requires explicitly approved provisioning and GitHub environment configuration.
 - translate external failures to the existing safe application exceptions;
 - record dependency duration and result without prompt or document bodies.
 
-### 3. Azure AI Search adapters — implemented, not invoked live
+### 3. Azure AI Search adapters — implemented and invoked live
 
 - define a versioned index schema for document identity, scope, version, chunk text, citation metadata, and vectors;
 - generate embeddings through the application-owned Foundry adapter and push vectors to Search;
@@ -69,7 +67,7 @@ requires explicitly approved provisioning and GitHub environment configuration.
 - preserve customer and contract filters before ranking;
 - map Azure results to application-owned `KnowledgeEvidence` citations.
 
-### 4. CI and live validation — implemented, not invoked live
+### 4. CI and live validation — bounded local Azure run completed
 
 - compile Bicep on ordinary pull requests without Azure authentication;
 - run unit and simulated integration tests without hosted calls;
@@ -81,12 +79,21 @@ requires explicitly approved provisioning and GitHub environment configuration.
 - disable provider SDK retries for the bounded live run and publish only
   cost-relevant counts and duration.
 
+The local keyless smoke test, bilingual grounded chat, correlated indexing and
+assistant traces, and idempotent CQRS confirmation are complete. The manually
+dispatched GitHub OIDC workflow remains available as a separate CI identity
+demonstration and is never triggered by an ordinary push or pull request.
+
 ### 5. Documentation and portfolio proof
 
 - document local and Azure setup, indexing, querying, troubleshooting, cost inspection, and teardown;
 - capture a cited ACME answer and correlated Aspire trace;
 - demonstrate that the confirmed cancellation request still executes CQRS/domain logic;
 - update the interview guide, architecture diagram, release notes, and CV only after the live flow is verified.
+
+Live technical validation is complete. The remaining portfolio slice is the
+dated evaluation report, final interview material, CV wording, and teardown
+decision before the promotional-credit deadline.
 
 ## Acceptance criteria
 

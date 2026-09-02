@@ -130,9 +130,9 @@ See [safe tool calling](docs/assistant/safe-tool-calling.md), [grounded answers]
 
 The required GitHub Actions workflow restores locked dependencies, audits NuGet and npm packages, verifies formatting, builds the solution, runs all tests, and executes the deterministic AI evaluator without hosted credentials or paid services.
 
-Current release-candidate coverage includes:
+Current coverage includes:
 
-- 167 backend tests across domain, application, integration, and AI evaluation projects;
+- 170 backend tests across domain, application, integration, and AI evaluation projects;
 - 15 React component and workflow tests;
 - 12 deterministic AI safety scenarios covering grounding, citation integrity, bilingual behavior, refusal, and tool routing.
 
@@ -161,7 +161,7 @@ npm run build
 | Fully local assistant | None                                                            | Adds approximately 2.5 GB for `qwen3:4b` and local CPU/RAM usage |
 | Kimi assistant        | Provider API credits only when a grounded question is submitted | Local PostgreSQL and embeddings remain required                  |
 | Aspire observability  | None                                                            | Optional local container and telemetry storage                   |
-| Optional Azure AI     | No cost until explicitly provisioned; Search Free has no hourly charge and Foundry inference consumes credit only when invoked | Local application and PostgreSQL remain available |
+| Optional Azure AI     | The development profile is provisioned; Search Free has no hourly charge and Foundry inference consumes credit only when invoked | Local application and PostgreSQL remain available |
 
 See [cost and resource management](docs/operations/cost-and-resources.md) for startup, storage, cleanup, credential removal, and the future Azure boundary.
 
@@ -198,6 +198,7 @@ docs/                         Architecture, decisions, operations and demo mater
 - [Microsoft Foundry model adapters](docs/azure/foundry-model-adapters.md)
 - [Azure AI Search adapter](docs/azure/azure-ai-search-adapter.md)
 - [Manual keyless Azure AI smoke test](docs/azure/manual-smoke-test.md)
+- [Azure AI live validation evidence](docs/azure/live-validation-2026-09-02.md)
 - [Azure infrastructure validation](infra/azure/README.md)
 - [v1.0.0 release checklist](docs/release/v1.0.0-checklist.md)
 - [Architecture Decision Records](docs/adr)
@@ -205,6 +206,6 @@ docs/                         Architecture, decisions, operations and demo mater
 
 ## Project status
 
-The local portfolio MVP is feature-complete and validated for the first `v1.0.0` release. The optional Microsoft Foundry and Azure AI Search adapters, non-deploying Azure infrastructure foundation, and manually dispatched OIDC smoke-test workflow are implemented incrementally. The workflow has not made a live call; provisioning and live Azure validation still require explicit approval. Microsoft Entra ID for end users remains a separate post-MVP item. None of these services is required to run or evaluate the local version.
+The local portfolio MVP is feature-complete and validated for the first `v1.0.0` release. The optional Microsoft Foundry and Azure AI Search development profile has also been provisioned and validated with bilingual grounded answers, keyless hybrid retrieval, correlated Aspire traces, and a separately confirmed CQRS action. Normal CI remains offline and non-billable; the manually dispatched GitHub OIDC workflow has not been required for ordinary pull requests. Microsoft Entra ID for end users remains a separate post-MVP item. None of the Azure services is required to run or evaluate the local version.
 
 ContractIQ uses fictional companies, contracts, policies, and rules. It is a software engineering demonstration and does not provide legal advice.
