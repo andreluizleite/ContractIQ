@@ -112,17 +112,23 @@ Build outputs can be recreated and are excluded from Git. Use the standard IDE o
 
 ## Azure boundary and teardown
 
-ContractIQ v1 remains locally runnable without Azure credentials or automatic provisioning. The post-v1 roadmap now contains reviewed Bicep under `infra/azure`, but merely cloning, building, or testing it does not create resources. Therefore:
+ContractIQ v1 remains locally runnable without Azure credentials or automatic
+provisioning. The optional development resources were provisioned on 2026-09-01
+after an explicit review, but merely cloning, building, or testing the repository
+still does not create or invoke them. Therefore:
 
 - cloning, building, testing, and demonstrating v1 creates no Azure resource;
-- no Azure resource group exists until an explicit subscription deployment is approved;
-- Microsoft Foundry and Azure AI Search adapters are implemented but remain optional and are not local runtime dependencies;
+- `rg-contractiq-ai-dev` exists only for the explicitly approved portfolio
+  validation and must not be treated as a prerequisite;
+- Microsoft Foundry and Azure AI Search adapters remain optional and are not
+  local runtime dependencies;
 - the free Search profile stays keyless for inbound application calls through Entra RBAC, while application-owned code generates and uploads embeddings;
 - Search-managed outbound identity, integrated vectorization, semantic ranking, and dedicated capacity remain a documented Basic-or-higher production evolution;
 - issue #13 records resource assumptions, budgets, keyless authentication, infrastructure as code, and the exact teardown boundary before deployment;
 - the USD 10 budget is an alerting target, not a hard spending cap;
-- model deployments remain disabled by default until live region, SKU, version,
-  quota, and cost checks are reviewed and provisioning is explicitly approved.
+- model deployments remain disabled by default for a new deployment even though
+  the reviewed development environment currently has `contractiq-chat` and
+  `contractiq-embeddings` available.
 
 The optional Azure smoke workflow also remains inert until a person selects the
 `azure-dev` environment in GitHub Actions. One run makes one Foundry embedding
@@ -132,4 +138,7 @@ the resulting count/duration report is retained for seven days. See the
 [manual keyless smoke-test guide](../azure/manual-smoke-test.md) for setup,
 execution, and revocation.
 
-This boundary prevents a documentation example from accidentally creating a chargeable cloud resource.
+The dated [Azure live-validation record](../azure/live-validation-2026-09-02.md)
+lists the exact bounded calls, trace evidence, temporary-index cleanup, and
+remaining review dates. This boundary prevents a documentation example or
+ordinary CI run from accidentally creating a chargeable cloud resource.

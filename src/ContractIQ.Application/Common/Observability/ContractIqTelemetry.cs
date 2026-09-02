@@ -42,6 +42,21 @@ public static class ContractIqTelemetry
         "contractiq.knowledge.search.result.count",
         unit: "{item}",
         description: "Evidence items returned by hybrid search.");
+    private static readonly Counter<long> KnowledgeIndexingRuns = Meter.CreateCounter<long>(
+        "contractiq.knowledge.indexing.runs",
+        description: "Number of knowledge indexing runs.");
+    private static readonly Histogram<double> KnowledgeIndexingDuration = Meter.CreateHistogram<double>(
+        "contractiq.knowledge.indexing.duration",
+        unit: "s",
+        description: "End-to-end knowledge indexing duration.");
+    private static readonly Histogram<long> KnowledgeIndexedDocumentCount = Meter.CreateHistogram<long>(
+        "contractiq.knowledge.indexing.document.count",
+        unit: "{item}",
+        description: "Documents indexed by a knowledge indexing run.");
+    private static readonly Histogram<long> KnowledgeIndexedChunkCount = Meter.CreateHistogram<long>(
+        "contractiq.knowledge.indexing.chunk.count",
+        unit: "{item}",
+        description: "Chunks indexed by a knowledge indexing run.");
     private static readonly Counter<long> KnowledgeIndexDependencyRequests = Meter.CreateCounter<long>(
         "contractiq.knowledge.index.dependency.requests",
         description: "Number of knowledge-index dependency operations.");
@@ -123,6 +138,23 @@ public static class ContractIqTelemetry
         KnowledgeSearches.Add(1, tags);
         KnowledgeSearchDuration.Record(duration.TotalSeconds, tags);
         KnowledgeSearchResultCount.Record(resultCount, tags);
+    }
+
+    public static void RecordKnowledgeIndexing(
+        string outcome,
+        TimeSpan duration,
+        int indexedDocuments,
+        int indexedChunks)
+    {
+        var tags = new TagList
+        {
+            { "contractiq.outcome", outcome },
+        };
+
+        KnowledgeIndexingRuns.Add(1, tags);
+        KnowledgeIndexingDuration.Record(duration.TotalSeconds, tags);
+        KnowledgeIndexedDocumentCount.Record(indexedDocuments, tags);
+        KnowledgeIndexedChunkCount.Record(indexedChunks, tags);
     }
 
     public static void RecordKnowledgeIndexDependency(

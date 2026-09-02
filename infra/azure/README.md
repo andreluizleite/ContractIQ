@@ -73,3 +73,49 @@ only one bounded indexing/query scenario.
 All billable-capable resources are kept in the exact resource group `rg-contractiq-ai-dev`. After preserving any required screenshots and validation evidence, delete that resource group from the Azure portal or with an explicitly reviewed CLI command. The subscription-level budget can then be removed separately.
 
 Deletion is intentionally not automated from a pull request or a normal CI run.
+
+### Exact reviewed teardown procedure
+
+Do not run these deletion commands until the portfolio evidence has been
+preserved and the owner has explicitly approved teardown. First verify the
+active subscription and exact targets:
+
+```powershell
+az account show --query "{Name:name, SubscriptionId:id, TenantId:tenantId}" --output table
+az resource list --resource-group rg-contractiq-ai-dev `
+  --query "[].{Name:name, Type:type, Location:location}" `
+  --output table
+az consumption budget show `
+  --budget-name budget-contractiq-ai-dev `
+  --output table
+```
+
+The expected resource group contains only the ContractIQ Foundry account and
+project, its two model deployments, Azure AI Search, and their role assignments.
+The budget is subscription-scoped and therefore is not removed with the group.
+
+After explicit approval, delete the isolated resource group and wait for Azure
+to report that it no longer exists:
+
+```powershell
+az group delete --name rg-contractiq-ai-dev --yes --no-wait
+az group wait --name rg-contractiq-ai-dev --deleted
+```
+
+Then remove the separate alert budget:
+
+```powershell
+az consumption budget delete --budget-name budget-contractiq-ai-dev
+```
+
+Finally verify both cleanup boundaries:
+
+```powershell
+az group exists --name rg-contractiq-ai-dev
+az consumption budget show --budget-name budget-contractiq-ai-dev
+```
+
+The expected group result is `false`; the budget lookup should report that the
+budget is not found. Record the UTC deletion date in issue #53. Deleting this
+Azure group does not remove the local repository, PostgreSQL volume, Aspire
+dashboard, GitHub repository, or local user secrets.
