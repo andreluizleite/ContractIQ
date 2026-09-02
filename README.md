@@ -132,7 +132,7 @@ The required GitHub Actions workflow restores locked dependencies, audits NuGet 
 
 Current coverage includes:
 
-- 170 backend tests across domain, application, integration, and AI evaluation projects;
+- 171 backend tests across domain, application, integration, and AI evaluation projects;
 - 15 React component and workflow tests;
 - 12 deterministic AI safety scenarios covering grounding, citation integrity, bilingual behavior, refusal, and tool routing.
 
@@ -190,6 +190,7 @@ docs/                         Architecture, decisions, operations and demo mater
 - [Grounded contract assistant](docs/assistant/grounded-answers.md)
 - [Safe assistant tool calling](docs/assistant/safe-tool-calling.md)
 - [Local-first AI evaluations](docs/assistant/ai-evaluations.md)
+- [Dated local fallback and offline evaluation evidence](docs/assistant/local-fallback-validation-2026-09-02.md)
 - [Local OpenTelemetry and Aspire Dashboard](docs/observability/local-telemetry.md)
 - [Security policy](SECURITY.md) and [v1 security review](docs/security/v1-security-review.md)
 - [Bilingual interview guide](docs/demo/interview-guide.md)

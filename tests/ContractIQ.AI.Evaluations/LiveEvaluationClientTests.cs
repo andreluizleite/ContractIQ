@@ -80,10 +80,14 @@ public sealed class LiveEvaluationClientTests
 
         AiEvaluationReport report = await runner.RunLiveAsync(
             dataset with { Scenarios = dataset.Scenarios.Take(2).ToArray() },
-            client);
+            client,
+            provider: "MicrosoftFoundry",
+            deployment: "contractiq-chat");
 
         Assert.False(report.Passed);
         Assert.Equal(2, report.TotalScenarios);
+        Assert.Equal("MicrosoftFoundry", report.Provider);
+        Assert.Equal("contractiq-chat", report.Deployment);
         Assert.Contains(report.Scenarios, result =>
             result.ScenarioId == dataset.Scenarios[0].Id &&
             result.Findings.Any(finding => finding.Metric == "provider_request"));

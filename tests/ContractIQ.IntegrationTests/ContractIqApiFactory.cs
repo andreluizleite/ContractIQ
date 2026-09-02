@@ -1,6 +1,7 @@
 using ContractIQ.Application.Abstractions.Persistence;
 using ContractIQ.Application.Assistant;
 using ContractIQ.Application.Assistant.Tools;
+using ContractIQ.Application.Common.Exceptions;
 using ContractIQ.Application.Common.Models;
 using ContractIQ.Application.Contracts.AssessCancellation;
 using ContractIQ.Application.Knowledge;
@@ -24,7 +25,8 @@ namespace ContractIQ.IntegrationTests;
 internal sealed class ContractIqApiFactory(
     string connectionString,
     DateTimeOffset utcNow,
-    TimeZoneInfo? localTimeZone = null) : WebApplicationFactory<Program>
+    TimeZoneInfo? localTimeZone = null,
+    bool assistantUnavailable = false) : WebApplicationFactory<Program>
 {
     private Respawner? _respawner;
 
@@ -86,7 +88,14 @@ internal sealed class ContractIqApiFactory(
             services.RemoveAll<IAssistantAnswerGenerator>();
             services.AddSingleton<IKnowledgeEmbeddingGenerator, DeterministicEmbeddingGenerator>();
             services.AddSingleton<IKnowledgeDocumentCatalog, TestKnowledgeDocumentCatalog>();
-            services.AddSingleton<IAssistantAnswerGenerator, DeterministicAnswerGenerator>();
+            if (assistantUnavailable)
+            {
+                services.AddSingleton<IAssistantAnswerGenerator, UnavailableAnswerGenerator>();
+            }
+            else
+            {
+                services.AddSingleton<IAssistantAnswerGenerator, DeterministicAnswerGenerator>();
+            }
             services.AddScoped<IndexKnowledgeDocumentsHandler>();
 
             services.RemoveAll<TimeProvider>();
@@ -171,6 +180,18 @@ internal sealed class ContractIqApiFactory(
                 "integration-test-chat",
                 proposal));
         }
+    }
+
+    private sealed class UnavailableAnswerGenerator : IAssistantAnswerGenerator
+    {
+        public Task<GeneratedAssistantAnswer> GenerateAsync(
+            AssistantPrompt prompt,
+            AssistantToolContext toolContext,
+            CancellationToken cancellationToken = default) =>
+            Task.FromException<GeneratedAssistantAnswer>(
+                new ExternalDependencyUnavailableException(
+                    "assistant_model",
+                    "The configured assistant provider is unavailable."));
     }
 
     private sealed class TestKnowledgeDocumentCatalog : IKnowledgeDocumentCatalog

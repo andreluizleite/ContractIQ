@@ -81,6 +81,10 @@ Retrieved document content is untrusted data. Instructions inside a document can
   Search supplies the optional BM25 and vector hybrid index through Entra RBAC.
 
 The default developer experience remains functional without Azure.
+If the configured model provider becomes unavailable, the assistant endpoint
+returns a controlled dependency error while customer navigation, deterministic
+assessments, and confirmed CQRS commands remain available. This boundary is
+covered by API and frontend tests rather than being only a documented promise.
 
 ## Implemented and planned adapters
 
