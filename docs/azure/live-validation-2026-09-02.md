@@ -121,6 +121,11 @@ read returned `No index with the name ... was found`, confirming cleanup. The
 primary `contractiq-knowledge-v1` index and the reviewed portfolio resources
 remain available for the next evaluation slice.
 
+The subsequent four-scenario evaluation is documented separately in
+[First bounded Microsoft Foundry evaluation](../assistant/foundry-evaluation-2026-09-02.md).
+The initial run is intentionally retained as a failed baseline rather than being
+replaced by an unrecorded retry.
+
 Review the paid-capable resources by 2026-09-27 and delete the development
 resource group before the assumed 2026-09-30 promotional-credit expiry when it
 is no longer required.

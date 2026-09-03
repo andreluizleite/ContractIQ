@@ -48,7 +48,8 @@ try
             dataset,
             new LiveEvaluationClient(httpClient),
             arguments.GetValueOrDefault("provider", "configured-api-provider"),
-            arguments.GetValueOrDefault("deployment"));
+            arguments.GetValueOrDefault("deployment"),
+            ParseScenarioDelay(arguments.GetValueOrDefault("delay-seconds")));
     }
     else
     {
@@ -158,4 +159,20 @@ static EvaluationBaseline SelectResponses(
             .Where(response => selectedIds.Contains(response.ScenarioId))
             .ToArray(),
     };
+}
+
+static TimeSpan ParseScenarioDelay(string? value)
+{
+    if (string.IsNullOrWhiteSpace(value))
+    {
+        return TimeSpan.Zero;
+    }
+
+    if (!int.TryParse(value, out int seconds) || seconds is < 0 or > 300)
+    {
+        throw new ArgumentException(
+            "--delay-seconds must be an integer between 0 and 300.");
+    }
+
+    return TimeSpan.FromSeconds(seconds);
 }
