@@ -26,11 +26,18 @@ Generate grounded bilingual answers, expose safe application tools, require conf
 
 Add configurable Microsoft Entra ID authentication and optional Microsoft Foundry and Azure AI Search adapters without making Azure mandatory.
 
-The Azure AI foundation is now in planning and infrastructure-validation delivery. Foundry and Search adapters, live provisioning, and end-user Entra authentication remain separate reviewable slices.
+The optional Foundry and Azure AI Search profile is implemented and validated
+with keyless Entra RBAC, hybrid retrieval, correlated telemetry, bounded live
+evaluations, and documented cost controls. End-user Entra authentication remains
+a separate post-MVP slice and is not required by the local portfolio release.
 
 ## M6 - Portfolio Release
 
 OpenTelemetry, the optional local dashboard, the structural product redesign, and local-first AI evaluations are implemented. Complete the security review, demonstration material, and the first tagged release.
+
+The `v1.0.0` release, security review, demonstration package, and Azure portfolio
+evidence are complete. Future work is optional product evolution rather than a
+requirement for the portfolio MVP.
 
 ## Definition of Ready
 

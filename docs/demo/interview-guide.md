@@ -260,3 +260,18 @@ Add Entra ID authentication and authorization, tenant isolation, managed secrets
 ### How do you know the AI is safe enough?
 
 Safety is layered: deterministic domain authority, scoped tools, application-owned citations, insufficient-evidence refusal, explicit confirmation, idempotent writes, privacy-aware telemetry, and deterministic evaluation scenarios in required CI. These controls constrain the model rather than assuming it is always correct.
+
+### Did the live Foundry evaluation pass?
+
+No, and the result is intentionally public. The first bounded run exposed a
+rate limit and brittle phrase checks. After adding pacing and hardening the
+deterministic evaluator, the second run completed all four scenarios without a
+429 response. Assessment, evidence, citation, scope, language, and no-write
+invariants passed, but variable prose and one English preparation-tool choice
+still failed strict gates.
+
+That is an important engineering result: a successful demonstration is not the
+same as deterministic model quality. ContractIQ keeps live model evaluation
+manual and observational, while its 12-scenario deterministic safety suite is
+the reproducible CI gate. The model can vary; the domain and transaction
+boundaries cannot.
