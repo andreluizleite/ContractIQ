@@ -93,8 +93,9 @@ demonstration and is never triggered by an ordinary push or pull request.
 
 Live technical validation and the two bounded, dated evaluation records are
 complete. The README, architecture overview, interview material, and public
-profile wording were updated only after that validation. The remaining
-operational decision is teardown before the promotional-credit deadline.
+profile wording were updated only after that validation. The owner-approved
+teardown was verified on 2026-09-03: the resource group, its resources, and the
+portfolio budget no longer exist in the subscription.
 
 ## Acceptance criteria
 

@@ -114,21 +114,25 @@ Build outputs can be recreated and are excluded from Git. Use the standard IDE o
 
 ContractIQ v1 remains locally runnable without Azure credentials or automatic
 provisioning. The optional development resources were provisioned on 2026-09-01
-after an explicit review, but merely cloning, building, or testing the repository
-still does not create or invoke them. Therefore:
+after an explicit review and removed on 2026-09-03 after the portfolio evidence
+was recorded. Merely cloning, building, or testing the repository does not create
+or invoke them. Therefore:
 
 - cloning, building, testing, and demonstrating v1 creates no Azure resource;
-- `rg-contractiq-ai-dev` exists only for the explicitly approved portfolio
-  validation and must not be treated as a prerequisite;
+- `rg-contractiq-ai-dev` existed only for the explicitly approved portfolio
+  validation and was never a prerequisite;
 - Microsoft Foundry and Azure AI Search adapters remain optional and are not
   local runtime dependencies;
-- the free Search profile stays keyless for inbound application calls through Entra RBAC, while application-owned code generates and uploads embeddings;
+- the validated free Search profile used keyless inbound application calls
+  through Entra RBAC, while application-owned code generated and uploaded
+  embeddings;
 - Search-managed outbound identity, integrated vectorization, semantic ranking, and dedicated capacity remain a documented Basic-or-higher production evolution;
-- issue #13 records resource assumptions, budgets, keyless authentication, infrastructure as code, and the exact teardown boundary before deployment;
-- the USD 10 budget is an alerting target, not a hard spending cap;
-- model deployments remain disabled by default for a new deployment even though
-  the reviewed development environment currently has `contractiq-chat` and
-  `contractiq-embeddings` available.
+- issue #13 records resource assumptions, budgets, keyless authentication,
+  infrastructure as code, and the verified teardown;
+- the deleted USD 10 budget was an alerting target, not a hard spending cap;
+- model deployments remain disabled by default for any future deployment. The
+  deleted development environment used `contractiq-chat` and
+  `contractiq-embeddings` during its bounded validation.
 
 The optional Azure smoke workflow also remains inert until a person selects the
 `azure-dev` environment in GitHub Actions. One run makes one Foundry embedding
@@ -142,3 +146,17 @@ The dated [Azure live-validation record](../azure/live-validation-2026-09-02.md)
 lists the exact bounded calls, trace evidence, temporary-index cleanup, and
 remaining review dates. This boundary prevents a documentation example or
 ordinary CI run from accidentally creating a chargeable cloud resource.
+
+### Verified teardown — 2026-09-03
+
+After the final live evidence was preserved, the owner explicitly approved the
+destructive teardown. Azure then confirmed:
+
+- `az group exists --name rg-contractiq-ai-dev` returned `false`;
+- no resource remained with resource group `rg-contractiq-ai-dev`;
+- no budget remained with name `budget-contractiq-ai-dev`.
+
+This removed the Azure AI Search service, Microsoft Foundry account, Foundry
+project, model deployments, and portfolio budget. The local application, GitHub
+repository, Bicep definitions, and dated evidence were unaffected. A future live
+Azure demonstration requires a new reviewed deployment.
