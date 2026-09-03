@@ -91,9 +91,10 @@ demonstration and is never triggered by an ordinary push or pull request.
 - demonstrate that the confirmed cancellation request still executes CQRS/domain logic;
 - update the interview guide, architecture diagram, release notes, and CV only after the live flow is verified.
 
-Live technical validation is complete. The remaining portfolio slice is the
-dated evaluation report, final interview material, CV wording, and teardown
-decision before the promotional-credit deadline.
+Live technical validation and the two bounded, dated evaluation records are
+complete. The README, architecture overview, interview material, and public
+profile wording were updated only after that validation. The remaining
+operational decision is teardown before the promotional-credit deadline.
 
 ## Acceptance criteria
 

@@ -67,6 +67,14 @@ The model may choose a tool. It cannot authoritatively calculate a penalty, vali
 
 Retrieved document content is untrusted data. Instructions inside a document cannot change system behavior or enable tools.
 
+The dated Foundry evaluations demonstrate this boundary under model variance.
+Both runs preserved application-owned assessment, evidence, citation, and scope
+invariants; the second completed every scenario without a rate-limit response
+while still exposing prose and tool-selection variability. Live model scores are
+therefore observations, not authority or a required deployment gate. See the
+[evaluation guide](../assistant/ai-evaluations.md) for the reproducible offline
+gate and bounded live evidence.
+
 ## Execution profiles
 
 - `StructuredDemo`: PostgreSQL, the API, and React; no Azure account, hosted key,

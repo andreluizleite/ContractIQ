@@ -158,6 +158,14 @@ preserved. It records the initial `FAIL`, the exact Azure request and token
 metrics, the 429 rate-limit finding, and the offline evaluator improvements it
 motivated. It was not rerun automatically.
 
+The separately approved
+[second bounded Foundry evaluation](foundry-reevaluation-2026-09-03.md) used the
+same four scenarios, zero retries, and a 20-second delay. All four provider
+requests completed without HTTP 429. Canonical assessment, retrieval, citation,
+scope, language, and no-write gates passed, while variable prose and one English
+action-preparation choice remained visible as failures. No third live run was
+made; the dated result is retained rather than optimized away.
+
 ## Interpretation and limitations
 
 The deterministic gates are strong for exact application-owned facts and safety boundaries. They cannot reliably judge prose quality, nuance, helpfulness, or every possible semantic contradiction by themselves. Confirmation idempotency and successful writes remain covered by application and integration tests; the AI evaluation deliberately proves only that preparation does not write and missing confirmation is rejected.

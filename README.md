@@ -192,6 +192,7 @@ docs/                         Architecture, decisions, operations and demo mater
 - [Local-first AI evaluations](docs/assistant/ai-evaluations.md)
 - [Dated local fallback and offline evaluation evidence](docs/assistant/local-fallback-validation-2026-09-02.md)
 - [First bounded Microsoft Foundry evaluation](docs/assistant/foundry-evaluation-2026-09-02.md)
+- [Second bounded Microsoft Foundry evaluation](docs/assistant/foundry-reevaluation-2026-09-03.md)
 - [Local OpenTelemetry and Aspire Dashboard](docs/observability/local-telemetry.md)
 - [Security policy](SECURITY.md) and [v1 security review](docs/security/v1-security-review.md)
 - [Bilingual interview guide](docs/demo/interview-guide.md)
@@ -208,6 +209,6 @@ docs/                         Architecture, decisions, operations and demo mater
 
 ## Project status
 
-The local portfolio MVP is feature-complete and validated for the first `v1.0.0` release. The optional Microsoft Foundry and Azure AI Search development profile has also been provisioned and validated with bilingual grounded answers, keyless hybrid retrieval, correlated Aspire traces, and a separately confirmed CQRS action. Normal CI remains offline and non-billable; the manually dispatched GitHub OIDC workflow has not been required for ordinary pull requests. Microsoft Entra ID for end users remains a separate post-MVP item. None of the Azure services is required to run or evaluate the local version.
+The local portfolio MVP is feature-complete and validated for the first `v1.0.0` release. The optional Microsoft Foundry and Azure AI Search development profile has also been provisioned and validated with bilingual grounded answers, keyless hybrid retrieval, correlated Aspire traces, a separately confirmed CQRS action, and two transparent bounded evaluation records. The second evaluation completed all four scenarios without a rate-limit response; deterministic assessment, retrieval, citation, scope, and write-safety gates remained stable while variable prose and one optional tool choice stayed visible as failures. Normal CI remains offline and non-billable; the manually dispatched GitHub OIDC workflow has not been required for ordinary pull requests. Microsoft Entra ID for end users remains a separate post-MVP item. None of the Azure services is required to run or evaluate the local version.
 
 ContractIQ uses fictional companies, contracts, policies, and rules. It is a software engineering demonstration and does not provide legal advice.
