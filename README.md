@@ -33,6 +33,17 @@ The model does not calculate penalties, authorize users, write to the database, 
 - automated domain, application, integration, frontend, security, and deterministic AI evaluation gates, plus an isolated manual keyless Azure smoke test;
 - GitHub Issues, short-lived branches, protected pull requests, Dependabot, and reproducible dependency locks.
 
+## AI-assisted engineering
+
+The repository includes an [AGENTS.md](AGENTS.md) guide that makes the Codex-assisted
+development process visible and reviewable. It records the architecture boundaries,
+runtime AI safety rules, provider constraints, privacy requirements, GitHub workflow and
+verification evidence expected from a coding agent.
+
+This guide configures development-time behavior. It does not add agents to the running
+application or change ContractIQ's single-assistant architecture. Human review remains the
+approval boundary for scope and pull-request merges.
+
 ## How it works
 
 ```mermaid
@@ -184,6 +195,7 @@ docs/                         Architecture, decisions, operations and demo mater
 ## Documentation
 
 - [Architecture overview](docs/architecture/overview.md)
+- [Coding-agent guide](AGENTS.md)
 - [Contract cancellation rules](docs/domain/cancellation-rules.md)
 - [Contract operation API](docs/api/contract-operations.md)
 - [Local knowledge retrieval](docs/knowledge/local-retrieval.md)
