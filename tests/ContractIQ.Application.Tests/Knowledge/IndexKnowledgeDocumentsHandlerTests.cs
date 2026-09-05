@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using ContractIQ.Application.Common.Observability;
 using ContractIQ.Application.Knowledge;
 using ContractIQ.Application.Knowledge.Indexing;
 using Xunit;
@@ -26,6 +28,77 @@ public sealed class IndexKnowledgeDocumentsHandlerTests
         Assert.Equal(0, second.IndexedDocuments);
         Assert.Equal(1, second.SkippedDocuments);
         Assert.Equal(1, index.ReplaceCount);
+    }
+
+    [Fact]
+    public async Task HandleAsync_correlates_indexing_spans_without_document_content_or_identifiers()
+    {
+        KnowledgeDocumentSource source = CreateSource();
+        var completedActivities = new List<Activity>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = activitySource =>
+                activitySource.Name is ContractIqTelemetry.ActivitySourceName or
+                    "ContractIQ.Application.Tests",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
+                ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = completedActivities.Add,
+        };
+        ActivitySource.AddActivityListener(listener);
+        using var testSource = new ActivitySource("ContractIQ.Application.Tests");
+
+        var handler = new IndexKnowledgeDocumentsHandler(
+            new Catalog(source),
+            new Embeddings(),
+            new InMemoryKnowledgeIndex(),
+            new MarkdownKnowledgeChunker());
+
+        Activity root = testSource.StartActivity("test.indexing.request")!;
+        ActivityTraceId expectedTraceId = root.TraceId;
+        await handler.HandleAsync();
+        root.Stop();
+
+        Activity[] indexingActivities = completedActivities
+            .Where(activity =>
+                activity.Source.Name == ContractIqTelemetry.ActivitySourceName &&
+                activity.TraceId == expectedTraceId)
+            .ToArray();
+
+        Activity indexing = Assert.Single(
+            indexingActivities,
+            activity => activity.OperationName == "contractiq.knowledge.index");
+        Activity document = Assert.Single(
+            indexingActivities,
+            activity => activity.OperationName == "contractiq.knowledge.document.index");
+        Activity check = Assert.Single(
+            indexingActivities,
+            activity => activity.OperationName == "contractiq.knowledge.index.check");
+        Activity embeddings = Assert.Single(
+            indexingActivities,
+            activity => activity.OperationName == "contractiq.knowledge.embedding.generate");
+        Activity replace = Assert.Single(
+            indexingActivities,
+            activity => activity.OperationName == "contractiq.knowledge.index.replace");
+
+        Assert.Equal(root.SpanId, indexing.ParentSpanId);
+        Assert.Equal(indexing.SpanId, document.ParentSpanId);
+        Assert.Equal(document.SpanId, check.ParentSpanId);
+        Assert.Equal(document.SpanId, embeddings.ParentSpanId);
+        Assert.Equal(document.SpanId, replace.ParentSpanId);
+        Assert.All(indexingActivities, activity =>
+            Assert.Equal(ActivityStatusCode.Ok, activity.Status));
+
+        string exportedTags = string.Join(
+            '|',
+            indexingActivities.SelectMany(activity => activity.TagObjects)
+                .Select(tag => $"{tag.Key}={tag.Value}"));
+
+        Assert.DoesNotContain(source.DocumentKey, exportedTags, StringComparison.Ordinal);
+        Assert.DoesNotContain(source.Title, exportedTags, StringComparison.Ordinal);
+        Assert.DoesNotContain(source.SourcePath, exportedTags, StringComparison.Ordinal);
+        Assert.DoesNotContain(source.Content, exportedTags, StringComparison.Ordinal);
+        Assert.DoesNotContain(source.CustomerId!.Value.ToString(), exportedTags, StringComparison.Ordinal);
+        Assert.DoesNotContain(source.ContractId!.Value.ToString(), exportedTags, StringComparison.Ordinal);
     }
 
     private static KnowledgeDocumentSource CreateSource() => new(

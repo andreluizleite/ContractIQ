@@ -1,10 +1,13 @@
 using System.ClientModel;
 using System.Diagnostics;
+using Azure.Identity;
 using ContractIQ.Application.Assistant;
 using ContractIQ.Application.Assistant.Tools;
 using ContractIQ.Application.Common.Exceptions;
 using ContractIQ.Application.Common.Observability;
+using ContractIQ.Infrastructure.AI;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
 using OllamaSharp;
 using OllamaSharp.Models.Exceptions;
 using OpenAI;
@@ -13,22 +16,27 @@ using OpenAIChatCompletionOptions = OpenAI.Chat.ChatCompletionOptions;
 namespace ContractIQ.Infrastructure.Assistant;
 
 /// <summary>
-/// Exposes the same application-owned tools to either a local Ollama model or
-/// the hosted Kimi API. Business decisions and writes remain in the application.
+/// Exposes the same application-owned tools to local Ollama, hosted Kimi, or
+/// Microsoft Foundry. Business decisions and writes remain in the application.
 /// </summary>
 internal sealed class ChatClientAssistantAnswerGenerator : IAssistantAnswerGenerator, IDisposable
 {
     private readonly IChatClient _chatClient;
+    private readonly ILogger<ChatClientAssistantAnswerGenerator> _logger;
     private readonly AssistantOptions _options;
     private readonly ContractAssistantReadTools _readTools;
 
     public ChatClientAssistantAnswerGenerator(
         AssistantOptions options,
-        ContractAssistantReadTools readTools)
+        ContractAssistantReadTools readTools,
+        FoundryOpenAIClientFactory foundryClientFactory,
+        ILogger<ChatClientAssistantAnswerGenerator> logger)
     {
         _options = options;
         _readTools = readTools;
-        _chatClient = new FunctionInvokingChatClient(CreateProviderClient(options))
+        _logger = logger;
+        _chatClient = new FunctionInvokingChatClient(
+            CreateProviderClient(options, foundryClientFactory))
         {
             AllowConcurrentInvocation = false,
             IncludeDetailedErrors = false,
@@ -87,7 +95,12 @@ internal sealed class ChatClientAssistantAnswerGenerator : IAssistantAnswerGener
             var chatOptions = new ChatOptions
             {
                 ModelId = _options.ChatModel,
-                MaxOutputTokens = _options.MaximumOutputTokens,
+                // GPT-5 deployments reject the legacy max_tokens field produced
+                // by the provider-neutral mapping. Foundry receives the same
+                // limit through max_completion_tokens in its raw options.
+                MaxOutputTokens = _options.Provider == AssistantProvider.Foundry
+                    ? null
+                    : _options.MaximumOutputTokens,
                 // Kimi models have provider-defined fixed temperatures and reject
                 // the 0.1 value used by the local deterministic demo profile.
                 Temperature = _options.Provider == AssistantProvider.Ollama
@@ -106,6 +119,11 @@ internal sealed class ChatClientAssistantAnswerGenerator : IAssistantAnswerGener
             if (_options.Provider == AssistantProvider.Kimi)
             {
                 chatOptions.RawRepresentationFactory = _ => CreateKimiChatOptions();
+            }
+            else if (_options.Provider == AssistantProvider.Foundry)
+            {
+                chatOptions.RawRepresentationFactory = _ =>
+                    CreateFoundryChatOptions(_options.MaximumOutputTokens);
             }
 
             ChatResponse response = await _chatClient.GetResponseAsync(
@@ -144,7 +162,11 @@ internal sealed class ChatClientAssistantAnswerGenerator : IAssistantAnswerGener
             throw CreateUnavailableException(exception);
         }
         catch (Exception exception) when (
-            exception is HttpRequestException or OllamaException or ClientResultException)
+            exception is HttpRequestException or
+                OllamaException or
+                ClientResultException or
+                AuthenticationFailedException or
+                CredentialUnavailableException)
         {
             RecordFailure(activity, provider, "unavailable", exception, startedAt);
             throw CreateUnavailableException(exception);
@@ -158,8 +180,18 @@ internal sealed class ChatClientAssistantAnswerGenerator : IAssistantAnswerGener
 
     public void Dispose() => _chatClient.Dispose();
 
-    private static IChatClient CreateProviderClient(AssistantOptions options)
+    private static IChatClient CreateProviderClient(
+        AssistantOptions options,
+        FoundryOpenAIClientFactory foundryClientFactory)
     {
+        if (options.Provider == AssistantProvider.Foundry)
+        {
+            return foundryClientFactory
+                .Create(options.Endpoint)
+                .GetChatClient(options.ChatModel)
+                .AsIChatClient();
+        }
+
         if (options.Provider == AssistantProvider.Kimi)
         {
             var clientOptions = new OpenAIClientOptions
@@ -189,15 +221,55 @@ internal sealed class ChatClientAssistantAnswerGenerator : IAssistantAnswerGener
     }
 #pragma warning restore SCME0001
 
+    internal static OpenAIChatCompletionOptions CreateFoundryChatOptions(
+        int maximumOutputTokens)
+    {
+        var options = new OpenAIChatCompletionOptions
+        {
+            MaxOutputTokenCount = maximumOutputTokens,
+        };
+
+        // The original GPT-5 models support "minimal", but OpenAI 2.12 only
+        // exposes low/medium/high as typed values. ContractIQ disables parallel
+        // tool calls, so the documented minimal setting is compatible here and
+        // preserves visible answer tokens inside the bounded output budget.
+#pragma warning disable SCME0001 // Patch is required until the SDK exposes GPT-5 minimal effort.
+        options.Patch.Set(
+            "$.reasoning_effort"u8,
+            BinaryData.FromString("\"minimal\""));
+#pragma warning restore SCME0001
+
+        return options;
+    }
+
     private ExternalDependencyUnavailableException CreateUnavailableException(
         Exception exception)
     {
-        string dependency = _options.Provider == AssistantProvider.Kimi
-            ? "kimi"
-            : "ollama";
-        string message = _options.Provider == AssistantProvider.Kimi
-            ? $"Kimi is unavailable or model '{_options.ChatModel}' cannot be accessed."
-            : $"Ollama is unavailable or chat model '{_options.ChatModel}' is not installed.";
+        // Keep prompts, answers, document content, and credentials out of logs.
+        // The exception type and provider message are enough to diagnose rejected
+        // parameters, authentication failures, and unavailable deployments.
+        _logger.LogWarning(
+            "AI provider {Provider} rejected the request for model {Model}. {ExceptionType}: {ExceptionMessage}",
+            _options.Provider,
+            _options.ChatModel,
+            exception.GetType().Name,
+            exception.Message);
+
+        string dependency = _options.Provider switch
+        {
+            AssistantProvider.Foundry => "foundry",
+            AssistantProvider.Kimi => "kimi",
+            _ => "ollama",
+        };
+        string message = _options.Provider switch
+        {
+            AssistantProvider.Foundry =>
+                $"Microsoft Foundry is unavailable or chat deployment '{_options.ChatModel}' cannot be accessed.",
+            AssistantProvider.Kimi =>
+                $"Kimi is unavailable or model '{_options.ChatModel}' cannot be accessed.",
+            _ =>
+                $"Ollama is unavailable or chat model '{_options.ChatModel}' is not installed.",
+        };
 
         return new ExternalDependencyUnavailableException(dependency, message, exception);
     }
