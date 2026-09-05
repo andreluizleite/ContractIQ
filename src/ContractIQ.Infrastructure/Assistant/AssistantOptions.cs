@@ -7,6 +7,7 @@ public enum AssistantProvider
 {
     Ollama,
     Kimi,
+    Foundry,
 }
 
 public sealed class AssistantOptions
@@ -48,14 +49,26 @@ public sealed class AssistantOptions
         if (!Enum.TryParse(providerValue, ignoreCase: true, out AssistantProvider provider))
         {
             throw new InvalidOperationException(
-                $"Assistant provider '{providerValue}' is not supported. Use 'Ollama' or 'Kimi'.");
+                $"Assistant provider '{providerValue}' is not supported. " +
+                "Use 'Ollama', 'Kimi', or 'Foundry'.");
         }
 
         string endpoint;
         string model;
         string? apiKey = null;
 
-        if (provider == AssistantProvider.Kimi)
+        if (provider == AssistantProvider.Foundry)
+        {
+            endpoint = GetRequiredSetting(
+                configuration,
+                "Foundry:OpenAIEndpoint",
+                "Foundry is selected as the assistant provider, but no OpenAI endpoint is configured.");
+            model = GetRequiredSetting(
+                configuration,
+                "Foundry:ChatDeployment",
+                "Foundry is selected as the assistant provider, but no chat deployment is configured.");
+        }
+        else if (provider == AssistantProvider.Kimi)
         {
             endpoint = configuration["Assistant:Kimi:Endpoint"]
                 ?? "https://api.moonshot.ai/v1";
@@ -107,10 +120,20 @@ public sealed class AssistantOptions
 
         var endpointUri = new Uri(endpoint, UriKind.Absolute);
 
-        if (provider == AssistantProvider.Kimi && endpointUri.Scheme != Uri.UriSchemeHttps)
+        if (provider is AssistantProvider.Kimi or AssistantProvider.Foundry &&
+            endpointUri.Scheme != Uri.UriSchemeHttps)
         {
             throw new InvalidOperationException(
-                "Kimi endpoint must use HTTPS because the hosted request contains an API key.");
+                $"{provider} endpoint must use HTTPS because it is a hosted provider.");
+        }
+
+        if (provider == AssistantProvider.Foundry &&
+            !endpointUri.AbsolutePath.TrimEnd('/').EndsWith(
+                "/openai/v1",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "Foundry OpenAI endpoint must end with '/openai/v1/'.");
         }
 
         return new AssistantOptions(
@@ -120,5 +143,19 @@ public sealed class AssistantOptions
             apiKey,
             maximumOutputTokens,
             temperature);
+    }
+
+    private static string GetRequiredSetting(
+        IConfiguration configuration,
+        string key,
+        string errorMessage)
+    {
+        string? value = configuration[key];
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new InvalidOperationException(errorMessage);
+        }
+
+        return value.Trim();
     }
 }

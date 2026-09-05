@@ -48,6 +48,32 @@ A confirmed cancellation adds `contractiq.assistant.tool.execute` and
 `contractiq.cancellation.create` spans. PostgreSQL command spans are emitted by
 Npgsql and remain children of the same request trace.
 
+The document indexer can export its own short-lived trace to the same dashboard.
+Set the telemetry variables in the terminal that runs the indexer:
+
+```powershell
+$env:OpenTelemetry__Enabled = 'true'
+$env:OpenTelemetry__OtlpEndpoint = 'http://localhost:4317'
+dotnet run --project tools/ContractIQ.DocumentIndexer
+```
+
+The indexer starts and stops its .NET host explicitly so the OpenTelemetry
+providers are activated and flushed before the console process exits. A changed
+document produces this correlated tree:
+
+```text
+contractiq.knowledge.index
+└── contractiq.knowledge.document.index
+    ├── contractiq.knowledge.index.check
+    ├── contractiq.knowledge.embedding.generate
+    │   └── provider embedding request
+    └── contractiq.knowledge.index.replace
+        └── PostgreSQL or Azure AI Search dependency request
+```
+
+An unchanged document ends after the check span with outcome `skipped`; it does
+not generate embeddings or replace index data.
+
 ## Correlation
 
 Every HTTP response includes `X-Correlation-ID`. The value is the W3C trace ID
@@ -69,6 +95,8 @@ addition to these application-owned measurements:
 - `contractiq.assistant.requests` and `contractiq.assistant.request.duration`;
 - `contractiq.assistant.evidence.count` and `contractiq.assistant.citation.count`;
 - `contractiq.knowledge.searches`, duration, and result count;
+- `contractiq.knowledge.indexing.runs`, duration, indexed document count, and
+  indexed chunk count;
 - `contractiq.ai.model.requests`, duration, and provider-reported token counts;
 - `contractiq.assistant.tool.calls` by tool, outcome, and state-changing class;
 - `contractiq.cancellation.commands` and command duration.
@@ -90,9 +118,11 @@ Standard ASP.NET Core server spans keep the matched route template, such as
 path/full-URL attributes before export so route values cannot carry contract IDs.
 
 Safe dimensions include operation name, provider and model name, language,
-outcome, duration, counts, and whether a tool is state-changing. The model HTTP
-instrumentation uses standard request metadata and does not capture request or
-response bodies. EF Core parameter value logging is not enabled.
+document type, outcome, duration, counts, and whether a tool is state-changing.
+Document titles, keys, paths, checksums, and business identifiers are not span
+attributes. The model HTTP instrumentation uses standard request metadata and
+does not capture request or response bodies. EF Core parameter value logging is
+not enabled.
 
 Tool audit events retain business identifiers inside the application boundary so
 a future authorized audit store can enforce access controls. The current exported
