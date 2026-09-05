@@ -1,6 +1,8 @@
 # ContractIQ
 
 [![CI](https://github.com/andreluizleite/ContractIQ/actions/workflows/ci.yml/badge.svg)](https://github.com/andreluizleite/ContractIQ/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/andreluizleite/ContractIQ)](https://github.com/andreluizleite/ContractIQ/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ContractIQ is a bilingual contract intelligence workspace that combines pragmatic enterprise .NET architecture with responsible AI engineering. It answers contract questions with cited evidence and can prepare a cancellation request, while deterministic domain logic remains the authority for every business decision and state change.
 
