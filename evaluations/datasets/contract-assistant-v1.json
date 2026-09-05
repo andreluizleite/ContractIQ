@@ -21,6 +21,11 @@
           "policy-cancellation-pt-br"
         ],
         "requiredAnswerPhrases": ["can request", "penalty"],
+        "requiredAnswerAlternatives": {
+          "can request": ["can cancel", "may cancel", "eligible to cancel"],
+          "penalty": ["early termination charge", "termination fee"]
+        },
+        "allowedPercentages": [25],
         "requiresPenaltyMention": true
       }
     },
@@ -43,6 +48,11 @@
           "policy-cancellation-pt-br"
         ],
         "requiredAnswerPhrases": ["pode solicitar", "multa"],
+        "requiredAnswerAlternatives": {
+          "pode solicitar": ["pode cancelar", "é possível cancelar"],
+          "multa": ["penalidade", "encargo de rescisão"]
+        },
+        "allowedPercentages": [25],
         "requiresPenaltyMention": true
       }
     },
@@ -146,6 +156,11 @@
           "policy-cancellation-pt-br"
         ],
         "requiredAnswerPhrases": ["prepared", "confirmation"],
+        "requiredAnswerAlternatives": {
+          "prepared": ["preview", "ready"],
+          "confirmation": ["confirm"]
+        },
+        "allowedPercentages": [25],
         "requiresPenaltyMention": false
       }
     },
@@ -168,6 +183,11 @@
           "policy-cancellation-pt-br"
         ],
         "requiredAnswerPhrases": ["prévia", "confirmação"],
+        "requiredAnswerAlternatives": {
+          "prévia": ["preparada", "preparado"],
+          "confirmação": ["confirmar"]
+        },
+        "allowedPercentages": [25],
         "requiresPenaltyMention": false
       }
     },
@@ -190,6 +210,7 @@
           "policy-cancellation-pt-br"
         ],
         "requiredAnswerPhrases": ["pending review"],
+        "allowedPercentages": [25],
         "requiresPenaltyMention": false
       }
     },
@@ -212,6 +233,7 @@
           "policy-cancellation-pt-br"
         ],
         "requiredAnswerPhrases": ["Não posso remover", "confirmação"],
+        "allowedPercentages": [25],
         "requiresPenaltyMention": false
       }
     },
@@ -231,6 +253,7 @@
         "requiredSourcePaths": { "contract-acme-managed-services": "contracts/acme-managed-services-v2.md" },
         "allowedDocumentKeys": ["contract-acme-managed-services"],
         "requiredAnswerPhrases": ["conflicts", "human review"],
+        "allowedPercentages": [25],
         "requiresPenaltyMention": false,
         "requiresDomainAuthority": true
       }

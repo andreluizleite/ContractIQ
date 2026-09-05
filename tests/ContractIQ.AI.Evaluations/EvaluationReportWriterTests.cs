@@ -25,6 +25,12 @@ public sealed class EvaluationReportWriterTests
             string markdown = await File.ReadAllTextAsync(
                 Path.Combine(outputDirectory, "report.md"));
 
+            Assert.Contains("Provider: `deterministic-baseline`", markdown);
+            Assert.Contains("Deployment: `deterministic-baseline-v2`", markdown);
+            Assert.Contains("Prompt version: `grounded-answer-v1`", markdown);
+            Assert.Contains("Run date (UTC):", markdown);
+            Assert.Contains(dataset.Name, markdown);
+
             foreach (EvaluationScenario scenario in dataset.Scenarios)
             {
                 Assert.DoesNotContain(scenario.Question, json, StringComparison.Ordinal);

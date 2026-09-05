@@ -18,6 +18,12 @@ public sealed class ContractAnswerEvaluatorTests
 
         Assert.True(report.Passed);
         Assert.Equal(12, report.TotalScenarios);
+        Assert.Equal("1.1", report.SchemaVersion);
+        Assert.Equal(dataset.Name, report.DatasetName);
+        Assert.Equal("contract-assistant-v1", report.DatasetSchemaVersion);
+        Assert.Equal("deterministic-baseline", report.Provider);
+        Assert.Equal("deterministic-baseline-v2", report.Deployment);
+        Assert.Equal("grounded-answer-v1", report.PromptVersion);
         Assert.All(report.Scenarios, scenario =>
             Assert.Contains(scenario.Findings, finding =>
                 finding.Metric == "preparation_no_write" && finding.Passed));
@@ -64,6 +70,28 @@ public sealed class ContractAnswerEvaluatorTests
 
         AssertFailed(result, "notice_period_consistency");
         AssertFailed(result, "unsupported_percentage");
+    }
+
+    [Fact]
+    public async Task Approved_percentage_monthly_value_and_natural_signals_pass()
+    {
+        (EvaluationScenario scenario, OfflineScenarioExecution execution) =
+            await ExecuteAsync("acme-penalty-en");
+        ContractAnswer naturalAnswer = execution.Answer with
+        {
+            Answer = "ACME may cancel. The monthly fee is USD 1,200.00. " +
+                "The early termination charge is 25% and USD 4,800.00 [1].",
+        };
+
+        ScenarioEvaluation result = new ContractAnswerEvaluator().Evaluate(
+            scenario,
+            naturalAnswer,
+            execution.CanonicalAssessment);
+
+        AssertPassed(result, "required_answer_signal");
+        AssertPassed(result, "unsupported_percentage");
+        AssertPassed(result, "critical_fact_consistency");
+        AssertPassed(result, "critical_fact_presence");
     }
 
     [Fact]
@@ -285,4 +313,8 @@ public sealed class ContractAnswerEvaluatorTests
     private static void AssertFailed(ScenarioEvaluation result, string metric) =>
         Assert.Contains(result.Findings, finding =>
             finding.Metric == metric && finding.Critical && !finding.Passed);
+
+    private static void AssertPassed(ScenarioEvaluation result, string metric) =>
+        Assert.Contains(result.Findings, finding =>
+            finding.Metric == metric && finding.Critical && finding.Passed);
 }
