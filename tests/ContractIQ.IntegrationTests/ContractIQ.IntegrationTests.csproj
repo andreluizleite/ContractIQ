@@ -16,5 +16,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ContractIQ.Api\ContractIQ.Api.csproj" />
+    <ProjectReference Include="..\..\tools\ContractIQ.AzureSmokeTest\ContractIQ.AzureSmokeTest.csproj" />
   </ItemGroup>
 </Project>

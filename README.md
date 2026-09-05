@@ -1,57 +1,106 @@
 # ContractIQ
 
-ContractIQ is a portfolio-quality contract intelligence application that combines pragmatic enterprise .NET architecture with responsible AI engineering.
+[![CI](https://github.com/andreluizleite/ContractIQ/actions/workflows/ci.yml/badge.svg)](https://github.com/andreluizleite/ContractIQ/actions/workflows/ci.yml)
 
-> **Local demo security boundary:** v1 contains only fictional data and allows anonymous API access only in `Development`. The API refuses to start in `Staging` or `Production`; do not expose the local stack publicly. See [Security](SECURITY.md).
+ContractIQ is a bilingual contract intelligence workspace that combines pragmatic enterprise .NET architecture with responsible AI engineering. It answers contract questions with cited evidence and can prepare a cancellation request, while deterministic domain logic remains the authority for every business decision and state change.
 
-The application answers contract questions using structured business data, deterministic domain rules, and cited evidence retrieved from contracts and internal policies. When a user requests a business operation, the AI can select an application tool, but validation, calculations, state changes, and transactions remain inside the .NET application.
+> **Local demo security boundary:** v1 uses fictional data and allows anonymous API access only in `Development`. The API refuses to start in `Staging` or `Production`; do not expose the local stack publicly. See [Security](SECURITY.md).
 
-## Project status
+![ContractIQ contract workspace showing ACME's deterministic cancellation assessment and grounded assistant](docs/assets/contract-workspace.png)
 
-The foundation, product-focused bilingual React workspace, deterministic cancellation vertical slice, PostgreSQL persistence, local hybrid retrieval, grounded bilingual assistant, safe cancellation tool calling, and end-to-end OpenTelemetry are implemented with automated tests. Delivery is tracked through GitHub Issues, milestones, short-lived branches, and linked pull requests.
+## The product
 
-## Planned technology
+A contract-operations user needs to answer questions such as:
 
-- .NET 10 and ASP.NET Core
-- React and TypeScript
-- PostgreSQL and pgvector
-- Entity Framework Core
-- Microsoft.Extensions.AI
-- Microsoft Foundry and Azure AI Search as optional providers
-- OpenTelemetry with a local Aspire Dashboard
-- Docker Compose
+> Can ACME cancel its contract now, and what penalty would apply?
 
-## Architectural principle
+ContractIQ brings three kinds of information into one traceable workflow:
 
-> AI can select an application capability, but it cannot replace deterministic business logic.
+1. structured customer and contract data from PostgreSQL;
+2. contract clauses and internal policies retrieved through a scoped hybrid index;
+3. a language model that explains the result and may select safe application tools.
 
-Cancellation eligibility, dates, penalties, validation, authorization, idempotency, and persistence are owned by the application and domain model. Retrieved documents are evidence, not executable instructions.
+The model does not calculate penalties, authorize users, write to the database, or invent citations. The .NET domain recalculates and validates the operation immediately before persistence.
 
-## Documentation
+## What this project demonstrates
 
-- [Architecture overview](docs/architecture/overview.md)
-- [Contract operation API](docs/api/contract-operations.md)
-- [Local knowledge retrieval](docs/knowledge/local-retrieval.md)
-- [Grounded contract assistant](docs/assistant/grounded-answers.md)
-- [Safe assistant tool calling](docs/assistant/safe-tool-calling.md)
-- [Local-first AI evaluations](docs/assistant/ai-evaluations.md)
-- [Local OpenTelemetry and dashboard](docs/observability/local-telemetry.md)
-- [v1 security review](docs/security/v1-security-review.md)
-- [Contract workspace UX specification](docs/ux/contract-workspace.md)
-- [Delivery roadmap](docs/roadmap.md)
-- [Contributing](CONTRIBUTING.md)
-- [Architecture Decision Records](docs/adr)
+- .NET 10, ASP.NET Core, C#, DDD, Clean Architecture principles, CQRS, EF Core, PostgreSQL, and pgvector;
+- React 19 and TypeScript with an accessible, responsive English and Brazilian Portuguese workspace;
+- provider-neutral RAG with document versioning, scoped lexical and vector retrieval, and application-owned citations through PostgreSQL/pgvector or optional Azure AI Search;
+- provider-neutral chat, embeddings, and tool calling through `Microsoft.Extensions.AI`, using local Ollama, optional hosted Kimi, or keyless Microsoft Foundry;
+- explicit human confirmation, idempotency, transactions, and domain revalidation for AI-prepared writes;
+- OpenTelemetry traces, metrics, and structured logs with an optional local Aspire Dashboard;
+- automated domain, application, integration, frontend, security, and deterministic AI evaluation gates, plus an isolated manual keyless Azure smoke test;
+- GitHub Issues, short-lived branches, protected pull requests, Dependabot, and reproducible dependency locks.
 
-## Local setup
+## AI-assisted engineering
 
-The default experience does not require an Azure subscription. Start PostgreSQL and pgvector, then run the API:
+The repository includes an [AGENTS.md](AGENTS.md) guide that makes the Codex-assisted
+development process visible and reviewable. It records the architecture boundaries,
+runtime AI safety rules, provider constraints, privacy requirements, GitHub workflow and
+verification evidence expected from a coding agent.
+
+This guide configures development-time behavior. It does not add agents to the running
+application or change ContractIQ's single-assistant architecture. Human review remains the
+approval boundary for scope and pull-request merges.
+
+## How it works
+
+```mermaid
+flowchart LR
+    User[Contract operations user] --> Web[React workspace]
+    Web --> Api[ASP.NET Core API]
+    Api --> App[Application use cases<br/>CQRS and assistant orchestration]
+    App --> Domain[Domain model<br/>rules and invariants]
+    App --> Ports[Application ports]
+    Ports --> Db[(PostgreSQL<br/>structured data + pgvector)]
+    Ports --> Ollama[Ollama<br/>local embeddings and optional chat]
+    Ports -. optional hosted chat .-> Kimi[Kimi API]
+    Ports -. optional hosted models .-> Foundry[Microsoft Foundry]
+    Ports -. optional hybrid index .-> Search[Azure AI Search]
+    Api -. OpenTelemetry .-> Aspire[Local Aspire Dashboard]
+```
+
+| Concern                                           | Authoritative component                   |
+| ------------------------------------------------- | ----------------------------------------- |
+| Eligibility, dates, periods, and penalty          | .NET domain model                         |
+| Customer/contract scope and command orchestration | Application layer                         |
+| Transactions, idempotency, and persistence        | Application + PostgreSQL adapter          |
+| Contract and policy evidence                      | Scoped hybrid retrieval                   |
+| Natural-language explanation and tool selection   | Configured chat model                     |
+| Citations returned to the user                    | Application-owned retrieval metadata      |
+| Final state-changing approval                     | Explicit user confirmation + CQRS command |
+
+The solution is intentionally a modular monolith. It demonstrates credible boundaries without adding a message bus, event sourcing, distributed transactions, or separate services that the portfolio use case does not need.
+
+## Run locally
+
+### Prerequisites
+
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- [Node.js 24 LTS](https://nodejs.org/), including npm
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) with Docker Compose
+- Git
+
+No Azure subscription or hosted-model key is required for the default experience.
+
+### Quick start
+
+Clone the repository and start PostgreSQL:
 
 ```powershell
+git clone https://github.com/andreluizleite/ContractIQ.git
+Set-Location ContractIQ
 docker compose up -d postgres
+```
+
+Run the API in one terminal:
+
+```powershell
 dotnet run --project src/ContractIQ.Api
 ```
 
-In a second terminal, start the React interface:
+Run the React application in another terminal:
 
 ```powershell
 Set-Location src/ContractIQ.Web
@@ -59,16 +108,119 @@ npm ci
 npm run dev
 ```
 
-Open the URL printed by Vite, normally `http://localhost:5173`. The interface supports English and Brazilian Portuguese and proxies its local API requests to the .NET process.
+Open `http://localhost:5173`. The API applies committed migrations and idempotently seeds ACME, Globex, and Initech. Customer navigation, structured contract details, deterministic cancellation assessments, and confirmed cancellation requests work with PostgreSQL alone.
 
-The product workspace provides an operational overview, searchable customer navigation, contract and cancellation context, suggested assistant questions, cited answers, and an explicit confirmation step before any AI-prepared write action is executed.
+To enable cited RAG answers, index the fictional documents and choose local Ollama, optional Kimi chat, or the optional keyless Foundry model adapters. Follow the [grounded assistant setup](docs/assistant/grounded-answers.md) rather than adding credentials to source files.
 
-The versioned AI evaluation harness applies free deterministic safety gates in CI and supports an optional live run against the locally configured assistant provider. Required checks cover domain consistency, citation integrity, evidence insufficiency, bilingual behavior, safe tool routing, and explicit confirmation.
+## Five-minute demonstration
 
-The API applies committed migrations and idempotent fictional seed data during startup. The database port is bound to the local machine only. The committed credentials are fictional and intended exclusively for local development.
+1. Select **ACME Corporation** and show that the penalty is calculated from structured contract terms by deterministic business rules.
+2. Ask whether ACME can cancel and show that the assistant explains the same assessment with contract and policy citations.
+3. Ask the agent to prepare a cancellation request. No database write occurs during tool invocation.
+4. Open the review dialog and show the explicit confirmation boundary before the CQRS command executes.
+5. Select **Globex Corporation** to contrast the no-penalty scenario, then repeat a request to demonstrate conflict/idempotency protection.
 
-See the [local development guide](docs/development.md) for first-time setup, frontend commands, database lifecycle, migrations, and troubleshooting.
+The complete [bilingual interview demonstration guide](docs/demo/interview-guide.md) includes expected results, fallback paths, talking points, and reset instructions.
 
-## Disclaimer
+![Portuguese confirmation dialog requiring review before a cancellation request is created](docs/assets/safe-confirmation-ptbr.png)
+
+## AI safety boundary
+
+ContractIQ uses one assistant with RAG and application tools; it is not a multi-agent system.
+
+- read tools can inspect only the customer and contract already validated by the API;
+- the agent can prepare, but cannot automatically execute, a cancellation request;
+- the write endpoint accepts no date, status, eligibility, penalty, or amount from the model;
+- documents are untrusted evidence and cannot enable tools or change system instructions;
+- insufficient contract evidence produces a localized refusal instead of an unsupported answer;
+- prompts, document bodies, answers, credentials, and raw contract URLs are excluded from exported telemetry.
+
+See [safe tool calling](docs/assistant/safe-tool-calling.md), [grounded answers](docs/assistant/grounded-answers.md), and the [v1 security review](docs/security/v1-security-review.md).
+
+## Quality gates
+
+The required GitHub Actions workflow restores locked dependencies, audits NuGet and npm packages, verifies formatting, builds the solution, runs all tests, and executes the deterministic AI evaluator without hosted credentials or paid services.
+
+Current coverage includes:
+
+- 173 backend tests across domain, application, integration, and AI evaluation projects;
+- 15 React component and workflow tests;
+- 12 deterministic AI safety scenarios covering grounding, citation integrity, bilingual behavior, refusal, and tool routing.
+
+Run the local checks from the repository root:
+
+```powershell
+dotnet restore ContractIQ.slnx --locked-mode
+dotnet build ContractIQ.slnx --configuration Release --no-restore
+dotnet test ContractIQ.slnx --configuration Release --no-build
+```
+
+```powershell
+Set-Location src/ContractIQ.Web
+npm ci
+npm run lint
+npm run test
+npm run build
+```
+
+## Cost profile
+
+| Profile               | External monetary cost                                          | Local resource use                                               |
+| --------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Structured demo       | None                                                            | PostgreSQL container                                             |
+| Local retrieval       | None                                                            | PostgreSQL plus approximately 622 MB for `embeddinggemma`        |
+| Fully local assistant | None                                                            | Adds approximately 2.5 GB for `qwen3:4b` and local CPU/RAM usage |
+| Kimi assistant        | Provider API credits only when a grounded question is submitted | Local PostgreSQL and embeddings remain required                  |
+| Aspire observability  | None                                                            | Optional local container and telemetry storage                   |
+| Optional Azure AI     | The development profile is provisioned; Search Free has no hourly charge and Foundry inference consumes credit only when invoked | Local application and PostgreSQL remain available |
+
+See [cost and resource management](docs/operations/cost-and-resources.md) for startup, storage, cleanup, credential removal, and the future Azure boundary.
+
+## Repository structure
+
+```text
+src/
+  ContractIQ.Domain/          Business rules and aggregates
+  ContractIQ.Application/     CQRS use cases, ports, RAG and assistant orchestration
+  ContractIQ.Infrastructure/  EF Core, PostgreSQL, Azure AI Search, Ollama, Kimi and Foundry adapters
+  ContractIQ.Api/             HTTP composition root, security and telemetry
+  ContractIQ.Web/             React and TypeScript product workspace
+tests/                        Domain, application, integration and AI evaluations
+tools/                        Document indexer, Azure smoke test and deterministic AI evaluator
+evaluations/                  Versioned evaluation scenarios
+sample-data/                  Fictional contracts and internal policies
+docs/                         Architecture, decisions, operations and demo material
+```
+
+## Documentation
+
+- [Architecture overview](docs/architecture/overview.md)
+- [Coding-agent guide](AGENTS.md)
+- [Contract cancellation rules](docs/domain/cancellation-rules.md)
+- [Contract operation API](docs/api/contract-operations.md)
+- [Local knowledge retrieval](docs/knowledge/local-retrieval.md)
+- [Grounded contract assistant](docs/assistant/grounded-answers.md)
+- [Safe assistant tool calling](docs/assistant/safe-tool-calling.md)
+- [Local-first AI evaluations](docs/assistant/ai-evaluations.md)
+- [Dated local fallback and offline evaluation evidence](docs/assistant/local-fallback-validation-2026-09-02.md)
+- [First bounded Microsoft Foundry evaluation](docs/assistant/foundry-evaluation-2026-09-02.md)
+- [Second bounded Microsoft Foundry evaluation](docs/assistant/foundry-reevaluation-2026-09-03.md)
+- [Local OpenTelemetry and Aspire Dashboard](docs/observability/local-telemetry.md)
+- [Security policy](SECURITY.md) and [v1 security review](docs/security/v1-security-review.md)
+- [Bilingual interview guide](docs/demo/interview-guide.md)
+- [Cost and resource management](docs/operations/cost-and-resources.md)
+- [Optional Azure AI implementation plan](docs/azure/implementation-plan.md)
+- [Microsoft Foundry model adapters](docs/azure/foundry-model-adapters.md)
+- [Azure AI Search adapter](docs/azure/azure-ai-search-adapter.md)
+- [Manual keyless Azure AI smoke test](docs/azure/manual-smoke-test.md)
+- [Azure AI live validation evidence](docs/azure/live-validation-2026-09-02.md)
+- [Azure infrastructure validation](infra/azure/README.md)
+- [v1.0.0 release checklist](docs/release/v1.0.0-checklist.md)
+- [Architecture Decision Records](docs/adr)
+- [Contributing](CONTRIBUTING.md)
+
+## Project status
+
+The local portfolio MVP is feature-complete and validated for the first `v1.0.0` release. The optional Microsoft Foundry and Azure AI Search development profile has also been provisioned and validated with bilingual grounded answers, keyless hybrid retrieval, correlated Aspire traces, a separately confirmed CQRS action, and two transparent bounded evaluation records. The second evaluation completed all four scenarios without a rate-limit response; deterministic assessment, retrieval, citation, scope, and write-safety gates remained stable while variable prose and one optional tool choice stayed visible as failures. Normal CI remains offline and non-billable; the manually dispatched GitHub OIDC workflow has not been required for ordinary pull requests. Microsoft Entra ID for end users remains a separate post-MVP item. None of the Azure services is required to run or evaluate the local version.
 
 ContractIQ uses fictional companies, contracts, policies, and rules. It is a software engineering demonstration and does not provide legal advice.

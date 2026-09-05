@@ -42,6 +42,32 @@ public static class ContractIqTelemetry
         "contractiq.knowledge.search.result.count",
         unit: "{item}",
         description: "Evidence items returned by hybrid search.");
+    private static readonly Counter<long> KnowledgeIndexingRuns = Meter.CreateCounter<long>(
+        "contractiq.knowledge.indexing.runs",
+        description: "Number of knowledge indexing runs.");
+    private static readonly Histogram<double> KnowledgeIndexingDuration = Meter.CreateHistogram<double>(
+        "contractiq.knowledge.indexing.duration",
+        unit: "s",
+        description: "End-to-end knowledge indexing duration.");
+    private static readonly Histogram<long> KnowledgeIndexedDocumentCount = Meter.CreateHistogram<long>(
+        "contractiq.knowledge.indexing.document.count",
+        unit: "{item}",
+        description: "Documents indexed by a knowledge indexing run.");
+    private static readonly Histogram<long> KnowledgeIndexedChunkCount = Meter.CreateHistogram<long>(
+        "contractiq.knowledge.indexing.chunk.count",
+        unit: "{item}",
+        description: "Chunks indexed by a knowledge indexing run.");
+    private static readonly Counter<long> KnowledgeIndexDependencyRequests = Meter.CreateCounter<long>(
+        "contractiq.knowledge.index.dependency.requests",
+        description: "Number of knowledge-index dependency operations.");
+    private static readonly Histogram<double> KnowledgeIndexDependencyDuration = Meter.CreateHistogram<double>(
+        "contractiq.knowledge.index.dependency.duration",
+        unit: "s",
+        description: "Knowledge-index dependency operation duration.");
+    private static readonly Histogram<long> KnowledgeIndexDependencyResultCount = Meter.CreateHistogram<long>(
+        "contractiq.knowledge.index.dependency.result.count",
+        unit: "{item}",
+        description: "Items affected or returned by a knowledge-index dependency operation.");
 
     private static readonly Counter<long> ModelRequests = Meter.CreateCounter<long>(
         "contractiq.ai.model.requests",
@@ -54,6 +80,13 @@ public static class ContractIqTelemetry
         "contractiq.ai.model.tokens",
         unit: "{token}",
         description: "Token usage reported by the configured model provider.");
+    private static readonly Counter<long> EmbeddingRequests = Meter.CreateCounter<long>(
+        "contractiq.ai.embedding.requests",
+        description: "Number of embedding-provider requests.");
+    private static readonly Histogram<double> EmbeddingRequestDuration = Meter.CreateHistogram<double>(
+        "contractiq.ai.embedding.request.duration",
+        unit: "s",
+        description: "Embedding-provider request duration.");
 
     private static readonly Counter<long> ToolCalls = Meter.CreateCounter<long>(
         "contractiq.assistant.tool.calls",
@@ -107,6 +140,42 @@ public static class ContractIqTelemetry
         KnowledgeSearchResultCount.Record(resultCount, tags);
     }
 
+    public static void RecordKnowledgeIndexing(
+        string outcome,
+        TimeSpan duration,
+        int indexedDocuments,
+        int indexedChunks)
+    {
+        var tags = new TagList
+        {
+            { "contractiq.outcome", outcome },
+        };
+
+        KnowledgeIndexingRuns.Add(1, tags);
+        KnowledgeIndexingDuration.Record(duration.TotalSeconds, tags);
+        KnowledgeIndexedDocumentCount.Record(indexedDocuments, tags);
+        KnowledgeIndexedChunkCount.Record(indexedChunks, tags);
+    }
+
+    public static void RecordKnowledgeIndexDependency(
+        string provider,
+        string operation,
+        string outcome,
+        TimeSpan duration,
+        int resultCount)
+    {
+        var tags = new TagList
+        {
+            { "db.system.name", provider },
+            { "db.operation.name", operation },
+            { "contractiq.outcome", outcome },
+        };
+
+        KnowledgeIndexDependencyRequests.Add(1, tags);
+        KnowledgeIndexDependencyDuration.Record(duration.TotalSeconds, tags);
+        KnowledgeIndexDependencyResultCount.Record(resultCount, tags);
+    }
+
     public static void RecordModelRequest(
         string provider,
         string model,
@@ -143,6 +212,24 @@ public static class ContractIqTelemetry
         };
 
         ToolCalls.Add(1, tags);
+    }
+
+    public static void RecordEmbeddingRequest(
+        string provider,
+        string model,
+        string outcome,
+        TimeSpan duration)
+    {
+        var tags = new TagList
+        {
+            { "gen_ai.operation.name", "embeddings" },
+            { "gen_ai.provider.name", provider },
+            { "gen_ai.request.model", model },
+            { "contractiq.outcome", outcome },
+        };
+
+        EmbeddingRequests.Add(1, tags);
+        EmbeddingRequestDuration.Record(duration.TotalSeconds, tags);
     }
 
     public static void RecordCancellationCommand(
