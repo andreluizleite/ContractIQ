@@ -574,6 +574,45 @@ public sealed class ApiEndpointsTests(PostgreSqlFixture postgres) : IAsyncLifeti
     }
 
     [Fact]
+    public async Task Assistant_outage_does_not_block_deterministic_contract_operations()
+    {
+        using var factory = new ContractIqApiFactory(
+            postgres.ConnectionString,
+            FrozenUtc,
+            assistantUnavailable: true);
+        await factory.ResetAndSeedDatabaseAsync();
+        await factory.IndexKnowledgeDocumentsAsync();
+        using var client = factory.CreateClient();
+
+        using HttpResponseMessage unavailableAssistant = await client.PostAsJsonAsync(
+            "/api/v1/assistant/answers",
+            new
+            {
+                Question = "Can ACME cancel now?",
+                CustomerId = DemoDataIds.AcmeCustomer,
+                ContractId = DemoDataIds.AcmeActiveContract,
+                Language = "en",
+            },
+            CancellationToken.None);
+
+        await AssertProblemDetailsAsync(
+            unavailableAssistant,
+            HttpStatusCode.ServiceUnavailable,
+            "assistant_model_unavailable");
+
+        using HttpResponseMessage assessment = await client.GetAsync(
+            $"/api/v1/contracts/{DemoDataIds.AcmeActiveContract}/cancellation-assessment",
+            CancellationToken.None);
+        Assert.Equal(HttpStatusCode.OK, assessment.StatusCode);
+
+        using HttpResponseMessage cancellation = await PostCancellationAsync(
+            client,
+            DemoDataIds.AcmeActiveContract,
+            "fallback-request-001");
+        Assert.Equal(HttpStatusCode.Created, cancellation.StatusCode);
+    }
+
+    [Fact]
     public async Task Assistant_prepares_a_cancellation_action_without_changing_state()
     {
         await _databaseFactory!.IndexKnowledgeDocumentsAsync();

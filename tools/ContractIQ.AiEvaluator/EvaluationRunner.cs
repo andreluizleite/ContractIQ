@@ -54,28 +54,40 @@ public sealed class EvaluationRunner(ContractAnswerEvaluator evaluator)
             });
         }
 
+        string baselineModelIds = string.Join(",", baseline.Responses
+            .Select(item => item.ModelId)
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal));
+
         return CreateReport(
             dataset,
             "offline",
             provider: "deterministic-baseline",
-            modelId: string.Join(",", baseline.Responses
-                .Select(item => item.ModelId)
-                .Distinct(StringComparer.Ordinal)
-                .Order(StringComparer.Ordinal)),
+            deployment: baselineModelIds,
+            modelId: baselineModelIds,
             evaluations);
     }
 
     public async Task<AiEvaluationReport> RunLiveAsync(
         EvaluationDataset dataset,
         ILiveEvaluationClient client,
+        string provider = "configured-api-provider",
+        string? deployment = null,
+        TimeSpan? scenarioDelay = null,
         CancellationToken cancellationToken = default)
     {
         var evaluations = new List<ScenarioEvaluation>(dataset.Scenarios.Count);
         var modelIds = new HashSet<string>(StringComparer.Ordinal);
+        TimeSpan delay = scenarioDelay ?? TimeSpan.Zero;
 
         foreach (EvaluationScenario scenario in dataset.Scenarios.Where(item => !item.OfflineOnly))
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (evaluations.Count > 0 && delay > TimeSpan.Zero)
+            {
+                await Task.Delay(delay, cancellationToken);
+            }
+
             try
             {
                 CancellationAssessmentDto canonicalAssessment =
@@ -112,7 +124,8 @@ public sealed class EvaluationRunner(ContractAnswerEvaluator evaluator)
         return CreateReport(
             dataset,
             "live",
-            provider: "configured-api-provider",
+            provider,
+            deployment: deployment ?? (modelIds.Count == 1 ? modelIds.Single() : null),
             modelId: modelIds.Count == 0
                 ? null
                 : string.Join(",", modelIds.Order(StringComparer.Ordinal)),
@@ -142,6 +155,7 @@ public sealed class EvaluationRunner(ContractAnswerEvaluator evaluator)
         EvaluationDataset dataset,
         string mode,
         string? provider,
+        string? deployment,
         string? modelId,
         IReadOnlyList<ScenarioEvaluation> evaluations)
     {
@@ -151,12 +165,15 @@ public sealed class EvaluationRunner(ContractAnswerEvaluator evaluator)
             .Count(finding => finding.Critical && !finding.Passed);
 
         return new AiEvaluationReport(
-            SchemaVersion: "1.0",
+            SchemaVersion: "1.1",
+            dataset.Name,
             dataset.SchemaVersion,
             mode,
             DateTimeOffset.UtcNow,
             provider,
+            deployment,
             modelId,
+            GroundedAnswerPromptBuilder.Version,
             evaluations.Count,
             evaluations.Count - failedScenarios,
             failedScenarios,

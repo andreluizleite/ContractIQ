@@ -13,7 +13,7 @@ internal sealed class OllamaKnowledgeEmbeddingGenerator : IKnowledgeEmbeddingGen
     {
         ModelId = options.EmbeddingModel;
         Dimensions = options.EmbeddingDimensions;
-        _generator = new OllamaApiClient(options.OllamaEndpoint, ModelId);
+        _generator = new OllamaApiClient(options.EmbeddingEndpoint, ModelId);
     }
 
     public string ModelId { get; }

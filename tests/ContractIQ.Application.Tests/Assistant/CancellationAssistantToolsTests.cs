@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using ContractIQ.Application.Assistant.Tools;
 using ContractIQ.Application.Cancellations.CreateCancellationRequest;
 using ContractIQ.Application.Common.Exceptions;
+using ContractIQ.Application.Common.Observability;
 using ContractIQ.Application.Contracts.AssessCancellation;
 using ContractIQ.Application.Contracts.GetContractDetails;
 using ContractIQ.Application.Knowledge;
@@ -108,6 +110,77 @@ public sealed class CancellationAssistantToolsTests
         Assert.Single(store.Requests);
         Assert.Contains(audit.Events, item => item.Outcome == "created");
         Assert.Contains(audit.Events, item => item.Outcome == "replayed");
+    }
+
+    [Fact]
+    public async Task Write_tool_correlates_confirmation_and_command_without_business_identifiers()
+    {
+        var contract = ApplicationTestData.CreateContract();
+        var repository = new FakeContractRepository(contract);
+        var store = new FakeCancellationRequestStore();
+        var audit = new FakeAssistantToolAudit();
+        var handler = CreateWriteHandler(repository, store, audit);
+        const string idempotencyKey = "telemetry-request-001";
+        ConfirmCancellationActionCommand command = Command(
+            contract,
+            confirmed: true,
+            idempotencyKey);
+        var completedActivities = new List<Activity>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = activitySource =>
+                activitySource.Name is ContractIqTelemetry.ActivitySourceName or
+                    "ContractIQ.Application.Tests",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
+                ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = completedActivities.Add,
+        };
+        ActivitySource.AddActivityListener(listener);
+        using var testSource = new ActivitySource("ContractIQ.Application.Tests");
+
+        Activity root = testSource.StartActivity("test.confirmation.request")!;
+        ActivityTraceId expectedTraceId = root.TraceId;
+        await handler.HandleAsync(command);
+        await handler.HandleAsync(command);
+        root.Stop();
+
+        Activity[] toolActivities = completedActivities
+            .Where(activity =>
+                activity.Source.Name == ContractIqTelemetry.ActivitySourceName &&
+                activity.TraceId == expectedTraceId &&
+                activity.OperationName == "contractiq.assistant.tool.execute")
+            .OrderBy(activity => activity.StartTimeUtc)
+            .ToArray();
+        Activity[] commandActivities = completedActivities
+            .Where(activity =>
+                activity.Source.Name == ContractIqTelemetry.ActivitySourceName &&
+                activity.TraceId == expectedTraceId &&
+                activity.OperationName == "contractiq.cancellation.create")
+            .OrderBy(activity => activity.StartTimeUtc)
+            .ToArray();
+
+        Assert.Equal(2, toolActivities.Length);
+        Assert.Equal(2, commandActivities.Length);
+        Assert.Equal("created", toolActivities[0].GetTagItem("contractiq.outcome"));
+        Assert.Equal("replayed", toolActivities[1].GetTagItem("contractiq.outcome"));
+        Assert.Equal(false, commandActivities[0].GetTagItem("contractiq.command.is_replay"));
+        Assert.Equal(true, commandActivities[1].GetTagItem("contractiq.command.is_replay"));
+        Assert.Equal(toolActivities[0].SpanId, commandActivities[0].ParentSpanId);
+        Assert.Equal(toolActivities[1].SpanId, commandActivities[1].ParentSpanId);
+        Assert.All(toolActivities, activity => Assert.Equal(root.SpanId, activity.ParentSpanId));
+        Assert.All(
+            toolActivities.Concat(commandActivities),
+            activity => Assert.Equal(ActivityStatusCode.Ok, activity.Status));
+
+        string exportedTags = string.Join(
+            '|',
+            toolActivities.Concat(commandActivities)
+                .SelectMany(activity => activity.TagObjects)
+                .Select(tag => $"{tag.Key}={tag.Value}"));
+
+        Assert.DoesNotContain(idempotencyKey, exportedTags, StringComparison.Ordinal);
+        Assert.DoesNotContain(contract.CustomerId.ToString(), exportedTags, StringComparison.Ordinal);
+        Assert.DoesNotContain(contract.Id.ToString(), exportedTags, StringComparison.Ordinal);
     }
 
     [Fact]

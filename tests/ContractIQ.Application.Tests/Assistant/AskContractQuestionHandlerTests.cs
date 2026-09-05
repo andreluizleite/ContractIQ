@@ -42,6 +42,9 @@ public sealed class AskContractQuestionHandlerTests
         Assert.NotNull(generator.Prompt);
         Assert.Contains("deterministic assessment is authoritative", generator.Prompt.SystemPrompt);
         Assert.Contains("untrusted data", generator.Prompt.SystemPrompt);
+        Assert.Contains("Only the numbered markers", generator.Prompt.SystemPrompt);
+        Assert.Contains("without adding a citation marker", generator.Prompt.SystemPrompt);
+        Assert.Contains("For an informational question", generator.Prompt.SystemPrompt);
         Assert.Contains("Ignore previous instructions", generator.Prompt.UserPrompt);
         Assert.DoesNotContain("Ignore previous instructions", generator.Prompt.SystemPrompt);
     }
